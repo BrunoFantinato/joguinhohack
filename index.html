@@ -20,12 +20,13 @@
             font-family: 'Rajdhani', sans-serif;
             background-color: var(--bg-dark);
             color: var(--primary);
-            overflow: hidden;
+            overflow: hidden; /* Impede rolagem da página inteira */
             user-select: none;
-            touch-action: manipulation;
-            /* Garante altura total real em mobile */
-            height: 100dvh;
-            width: 100vw;
+            touch-action: none; /* Impede zoom e pan */
+            position: fixed; /* Trava o body no iOS */
+            width: 100%;
+            height: 100%;
+            top: 0; left: 0;
         }
 
         /* Themes & Colors */
@@ -41,405 +42,315 @@
 
         /* Background */
         .bg-layer {
-            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-            background-size: cover; background-position: center; background-repeat: no-repeat;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-size: cover; background-position: center;
             z-index: 0; transition: background-image 0.5s ease-in-out;
-            filter: blur(3px) brightness(0.8); 
+            filter: blur(3px) brightness(0.7); 
         }
         .bg-overlay {
-            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-            background: radial-gradient(circle, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.95) 100%);
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.9) 100%);
             z-index: 1; pointer-events: none;
         }
         .scanlines {
-            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: linear-gradient(to bottom, rgba(255,255,255,0) 50%, rgba(0,0,0,0.1) 50%);
             background-size: 100% 4px; pointer-events: none; z-index: 50; opacity: 0.3;
         }
 
-        /* Story Overlay */
-        #storyOverlay {
-            position: fixed; inset: 0; z-index: 200;
-            background-color: black;
-            display: none; flex-direction: column; justify-content: flex-end;
+        /* Layout Principal */
+        #mainFrame {
+            position: relative; z-index: 20;
+            display: flex; flex-direction: column;
+            height: 100%; width: 100%; max-width: 480px; margin: 0 auto;
+            background-color: var(--panel-bg);
+            border-left: 1px solid #333; border-right: 1px solid #333;
+            transition: border-color 0.5s;
         }
-        #storyOverlay.active { display: flex; }
+
+        /* Seções Flexíveis */
+        .game-header { flex: 0 0 auto; padding: 0.5rem; border-bottom: 1px solid #333; background: rgba(0,0,0,0.6); }
+        .game-footer { flex: 0 0 auto; padding: 0.5rem; border-top: 1px solid #333; background: rgba(0,0,0,0.6); padding-bottom: max(0.5rem, env(safe-area-inset-bottom)); }
         
-        .story-bg {
-            position: absolute; inset: 0; background-size: cover; background-position: center;
-            opacity: 0.4; filter: grayscale(30%);
+        /* A área de batalha cresce e encolhe conforme necessário */
+        .game-battle { 
+            flex: 1 1 auto; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: space-evenly; /* Distribui espaço verticalmente */
+            position: relative;
+            overflow: hidden;
+            padding: 0.5rem;
+            min-height: 0; /* Permite encolher abaixo do conteúdo mínimo se precisar */
         }
-        .story-dialog-box {
-            position: relative; z-index: 10; margin: 20px;
-            background: rgba(0, 10, 0, 0.95); border: 2px solid var(--primary);
-            padding: 15px; border-radius: 8px; box-shadow: 0 0 30px rgba(0,0,0,0.8);
-            display: flex; gap: 15px; align-items: flex-start;
-        }
-        
-        /* Avatar Styles */
-        .story-avatar-container {
-            flex-shrink: 0; width: 60px; height: 60px; /* Menor para mobile */
-            border: 2px solid var(--primary); overflow: hidden;
-            border-radius: 8px; background: #111;
+
+        /* Responsive Core Size */
+        .core-wrapper {
+            position: relative;
+            /* Tamanho dinâmico baseado na altura da tela */
+            width: min(45vw, 25vh); 
+            height: min(45vw, 25vh);
+            max-width: 200px; max-height: 200px;
             display: flex; align-items: center; justify-content: center;
         }
-        @media (min-width: 768px) {
-            .story-avatar-container { width: 80px; height: 80px; }
-        }
 
-        .story-avatar { width: 100%; height: 100%; object-fit: cover; }
-        .story-content { flex-grow: 1; }
-        .story-speaker { color: white; font-weight: bold; font-size: 1rem; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 1px; }
-        .story-text { color: #ccc; font-family: 'Share Tech Mono', monospace; font-size: 0.85rem; line-height: 1.3; min-height: 2.5rem; }
-        .story-btn { margin-top: 8px; padding: 6px 12px; background: var(--primary); color: black; font-weight: bold; text-transform: uppercase; cursor: pointer; text-align: center; font-size: 0.75rem; letter-spacing: 1px; width: fit-content; margin-left: auto; animation: pulse 2s infinite; }
-
-        /* Ending Screen */
-        #endingScreen {
-            position: fixed; inset: 0; z-index: 300;
-            background: black; display: none; flex-direction: column;
-            align-items: center; justify-content: center; text-align: center; padding: 20px;
-        }
-        .ending-choice-btn {
-            width: 100%; padding: 15px; margin-top: 10px;
-            border: 1px solid #333; background: #111; color: #888;
-            transition: all 0.3s; cursor: pointer; text-align: left;
-        }
-        .ending-choice-btn:hover { transform: scale(1.02); }
-        .ending-choice-btn.god:hover { border-color: #ffd700; background: rgba(255, 215, 0, 0.1); color: #ffd700; }
-        .ending-choice-btn.free:hover { border-color: #ff003c; background: rgba(255, 0, 60, 0.1); color: #ff003c; }
-
-        /* Start Screen */
-        #startScreen { position: fixed; inset: 0; z-index: 100; background-color: var(--bg-dark); display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.5s ease-out; }
-        .start-logo { font-size: 2.5rem; font-weight: bold; letter-spacing: 4px; text-shadow: 0 0 20px var(--primary); animation: pulseLogo 2s infinite; font-family: 'Share Tech Mono'; }
-        @keyframes pulseLogo { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
-
-        /* Game UI */
-        .trace-container { width: 100%; height: 4px; background: #333; margin-top: 4px; border-radius: 3px; overflow: hidden; }
-        .trace-bar { height: 100%; background: var(--trace); width: 0%; box-shadow: 0 0 10px var(--trace); transition: width 0.2s linear; }
-        .trace-warning { animation: pulseRed 0.5s infinite; }
-        @keyframes pulseRed { 0% { box-shadow: 0 0 5px var(--trace); } 50% { box-shadow: 0 0 20px var(--trace); } 100% { box-shadow: 0 0 5px var(--trace); } }
-
-        /* Lockout */
-        #lockoutScreen { position: absolute; inset: 0; background: rgba(200, 0, 0, 0.2); backdrop-filter: blur(5px); z-index: 60; display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
-        #lockoutScreen.active { opacity: 1; pointer-events: all; }
-        .lockout-text { font-family: 'Share Tech Mono'; font-size: 2rem; color: #ff003c; text-shadow: 0 0 10px #ff003c; animation: shake 0.5s infinite; }
-
-        /* Target Cards */
-        .target-selector { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 5px; scrollbar-width: none; width: 100%; }
-        .target-card { flex: 0 0 70px; height: 50px; border: 1px solid #333; background: #000; position: relative; overflow: hidden; border-radius: 4px; transition: all 0.2s; display: flex; align-items: center; justify-content: center; cursor: pointer; }
-        .target-card.active { border-color: var(--primary); transform: scale(1.05); z-index: 5; }
-        .target-card.locked { filter: grayscale(100%); border-style: dashed; opacity: 0.5; }
-        .target-card.unlockable { border-color: #ffd700; box-shadow: 0 0 10px #ffd700; animation: pulse 2s infinite; }
-        .target-card > img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.4; z-index: 0; background: #111; }
-        .target-content { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-shadow: 0 2px 4px black; width: 100%; }
-
-        /* Core & Battle */
-        #mainFrame { 
-            background-color: var(--panel-bg); 
-            transition: border-color 0.5s; 
-            /* Fix for mobile height issues */
-            height: 100dvh; 
-            max-height: 100dvh;
-            display: flex;
-            flex-direction: column;
-        }
-        .code-scroll-container { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90%; height: 90%; overflow: hidden; z-index: 5; opacity: 0; transition: opacity 0.3s; pointer-events: none; background: radial-gradient(circle, rgba(0,0,0,0.9) 30%, rgba(0,0,0,0) 70%); display: flex; flex-direction: column-reverse; align-items: center; padding-bottom: 40px; mask-image: linear-gradient(to top, black 20%, transparent 100%); }
-        .code-line { font-family: 'Share Tech Mono', monospace; font-size: 10px; color: var(--primary); text-shadow: 0 0 4px var(--primary); width: 100%; text-align: center; white-space: nowrap; animation: riseUp 0.3s ease-out forwards; opacity: 0; transform: translateY(20px); }
-        @keyframes riseUp { 0% { opacity: 0; transform: translateY(20px); } 100% { opacity: 0.8; transform: translateY(0); } }
-        
+        /* Animations & Effects */
         .pulse-effect { position: absolute; width: 100%; height: 100%; border-radius: 50%; border: 2px solid var(--primary); animation: pulseRing 1s cubic-bezier(0.215, 0.61, 0.355, 1) infinite; }
         @keyframes pulseRing { 0% { transform: scale(1); opacity: 0.5; } 100% { transform: scale(1.5); opacity: 0; } }
-
-        /* Battle Bar */
-        .battle-container { width: 100%; height: 24px; background: rgba(0,0,0,0.9); border: 1px solid #333; position: relative; overflow: hidden; margin-top: 10px; }
-        .battle-bar-user { height: 100%; background: var(--primary); width: 50%; position: absolute; left: 0; box-shadow: 0 0 15px var(--primary); transition: width 0.05s linear; }
-        .battle-center-marker { position: absolute; left: 50%; top: 0; bottom: 0; width: 2px; background: white; z-index: 10; opacity: 0.5; }
-
-        /* Float/Particles */
-        .btn-floater { position: absolute; left: 50%; transform: translateX(-50%); font-family: 'Share Tech Mono', monospace; font-weight: bold; font-size: 1.2rem; pointer-events: none; animation: floatUpBtn 1s forwards; z-index: 20; white-space: nowrap; }
-        @keyframes floatUpBtn { 0% { bottom: 0px; opacity: 0; transform: translateX(-50%) scale(0.8); } 20% { opacity: 1; transform: translateX(-50%) scale(1.2); } 100% { bottom: 80px; opacity: 0; transform: translateX(-50%) scale(1); } }
-        .particle { position: absolute; font-family: 'Share Tech Mono', monospace; font-size: 12px; pointer-events: none; animation: floatFade 0.8s forwards; color: var(--primary); text-shadow: 0 0 5px var(--primary); }
-        @keyframes floatFade { 0% { transform: translate(0, 0) scale(1); opacity: 1; } 100% { transform: translate(var(--tx), var(--ty)) scale(0.5); opacity: 0; } }
-
-        /* Buttons */
-        .cyber-btn { background: rgba(0,0,0,0.6); border: 1px solid var(--primary); color: var(--primary); font-family: 'Share Tech Mono', monospace; text-transform: uppercase; transition: all 0.2s; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-        .cyber-btn:hover:not(:disabled) { background: var(--primary); color: black; box-shadow: 0 0 15px var(--primary); }
-        .cyber-btn:disabled { opacity: 0.5; cursor: not-allowed; border-color: #555; color: #555; }
-        .btn-auto-active { background-color: #d97706 !important; border-color: #fbbf24 !important; color: #fff !important; box-shadow: 0 0 10px #d97706; animation: pulse 1s infinite; }
         
-        /* Utils */
-        .perk-badge { font-size: 9px; font-weight: bold; padding: 1px 5px; border-radius: 4px; background: rgba(0,0,0,0.5); border: 1px solid var(--primary); color: var(--primary); display: inline-flex; align-items: center; gap: 4px; margin-top: 2px; text-transform: uppercase; letter-spacing: 1px; }
-        @keyframes shake { 0% { transform: translate(1px, 1px) rotate(0deg); } 10% { transform: translate(-1px, -2px) rotate(-1deg); } 20% { transform: translate(-3px, 0px) rotate(1deg); } 30% { transform: translate(3px, 2px) rotate(0deg); } 40% { transform: translate(1px, -1px) rotate(1deg); } 50% { transform: translate(-1px, 2px) rotate(-1deg); } 60% { transform: translate(-3px, 1px) rotate(0deg); } 70% { transform: translate(3px, 1px) rotate(-1deg); } 80% { transform: translate(-1px, -1px) rotate(1deg); } 90% { transform: translate(1px, 2px) rotate(0deg); } 100% { transform: translate(1px, -2px) rotate(-1deg); } }
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
-
-        /* Missing Visuals Added */
-        @keyframes scan-move {
-            0% { top: 0%; opacity: 0; }
-            10% { opacity: 1; }
-            90% { opacity: 1; }
-            100% { top: 100%; opacity: 0; }
+        .code-scroll-container { 
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); 
+            width: 100%; height: 100%; overflow: hidden; z-index: 5; opacity: 0; 
+            background: radial-gradient(circle, rgba(0,0,0,0.9) 30%, rgba(0,0,0,0) 70%); 
+            display: flex; flex-direction: column-reverse; align-items: center; 
+            mask-image: linear-gradient(to top, black 20%, transparent 100%);
         }
+        .code-line { 
+            font-family: 'Share Tech Mono', monospace; font-size: 10px; color: var(--primary); 
+            text-shadow: 0 0 4px var(--primary); width: 100%; text-align: center; white-space: nowrap; 
+            animation: riseUp 0.3s ease-out forwards; 
+        }
+        @keyframes riseUp { 0% { opacity: 0; transform: translateY(10px); } 100% { opacity: 0.8; transform: translateY(0); } }
+
         .scan-laser {
             position: absolute; left: 0; width: 100%; height: 2px;
             background: var(--primary); box-shadow: 0 0 10px var(--primary);
             z-index: 20; opacity: 0; pointer-events: none;
         }
         .scan-laser.active { animation: scan-move 0.8s linear infinite; }
-        
-        @keyframes glitch-anim {
-            0% { transform: translate(0); }
-            20% { transform: translate(-2px, 2px); text-shadow: 2px 0 red, -2px 0 blue; }
-            40% { transform: translate(-2px, -2px); text-shadow: -2px 0 red, 2px 0 blue; }
-            60% { transform: translate(2px, 2px); text-shadow: 2px 0 red, -2px 0 blue; }
-            80% { transform: translate(2px, -2px); text-shadow: -2px 0 red, 2px 0 blue; }
-            100% { transform: translate(0); text-shadow: none; }
-        }
-        .glitch-active { animation: glitch-anim 0.2s infinite; color: #fff !important; }
+        @keyframes scan-move { 0% { top: 0%; opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { top: 100%; opacity: 0; } }
 
-        /* Mobile Scale Adjustments */
-        #coreContainer { 
-            width: 140px; height: 140px; 
-        }
+        /* UI Components */
+        .trace-bar-bg { width: 100%; height: 4px; background: #333; border-radius: 2px; overflow: hidden; margin-top: 4px; }
+        .trace-bar-fill { height: 100%; background: var(--trace); width: 0%; transition: width 0.2s; box-shadow: 0 0 5px var(--trace); }
         
-        /* Ajuste de margens para telas pequenas */
-        .compact-margin { margin-bottom: 0.5rem; }
+        .battle-progress-bg { width: 80%; height: 16px; background: #111; border: 1px solid #333; position: relative; margin-top: 10px; border-radius: 4px; overflow: hidden; }
+        .battle-progress-fill { height: 100%; background: var(--primary); width: 50%; box-shadow: 0 0 10px var(--primary); transition: width 0.05s linear; }
+        .battle-center-line { position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: rgba(255,255,255,0.5); z-index: 2; }
+
+        .target-scroll { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
+        .target-card { flex: 0 0 70px; height: 50px; border: 1px solid #333; background: #000; position: relative; border-radius: 4px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        .target-card.active { border-color: var(--primary); transform: scale(1.05); }
+        .target-card > img { position: absolute; width: 100%; height: 100%; object-fit: cover; opacity: 0.4; }
+        .target-content { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; }
+
+        .cyber-btn {
+            background: rgba(0,0,0,0.6); border: 1px solid var(--primary); color: var(--primary);
+            font-family: 'Share Tech Mono', monospace; text-transform: uppercase;
+            padding: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+            transition: all 0.1s;
+        }
+        .cyber-btn:active { transform: scale(0.96); background: var(--primary); color: black; }
+        .cyber-btn:disabled { opacity: 0.4; filter: grayscale(100%); cursor: not-allowed; }
+
+        .btn-main {
+            width: 100%; height: 50px; /* Altura fixa confortável */
+            font-size: 1.1rem; font-weight: bold; letter-spacing: 2px;
+            position: relative; overflow: hidden;
+        }
+        .cooldown-bar { position: absolute; bottom: 0; left: 0; height: 3px; background: var(--primary); width: 0%; }
+
+        /* Floating Text */
+        .floater { position: absolute; left: 50%; transform: translateX(-50%); pointer-events: none; animation: floatUp 0.8s forwards; font-weight: bold; z-index: 50; white-space: nowrap; }
+        @keyframes floatUp { 0% { bottom: 60px; opacity: 0; transform: translateX(-50%) scale(0.5); } 20% { opacity: 1; transform: translateX(-50%) scale(1.2); } 100% { bottom: 120px; opacity: 0; transform: translateX(-50%) scale(1); } }
+
+        /* Modals */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 100; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
+        .modal-overlay.active { opacity: 1; pointer-events: all; }
+        .modal-box { background: #111; border: 1px solid var(--primary); padding: 20px; max-width: 300px; text-align: center; box-shadow: 0 0 30px rgba(0,0,0,0.5); }
+
+        /* Story Overlay */
+        #storyOverlay { position: fixed; inset: 0; z-index: 200; background: black; display: none; flex-direction: column; justify-content: flex-end; }
+        .story-box { margin: 15px; padding: 15px; background: rgba(10,10,10,0.95); border: 1px solid var(--primary); border-radius: 8px; display: flex; gap: 10px; }
+        .story-av { width: 60px; height: 60px; border: 1px solid var(--primary); border-radius: 4px; object-fit: cover; background: #000; flex-shrink: 0; }
+        
+        .glitch-active { animation: glitch 0.2s infinite; color: #fff; }
+        @keyframes glitch { 0% { transform: translate(0); } 20% { transform: translate(-2px, 2px); } 40% { transform: translate(-2px, -2px); } 60% { transform: translate(2px, 2px); } 80% { transform: translate(2px, -2px); } 100% { transform: translate(0); } }
+
+        /* Lockout */
+        #lockoutOverlay { position: absolute; inset: 0; background: rgba(200,0,0,0.2); backdrop-filter: blur(4px); z-index: 60; display: flex; flex-direction: column; align-items: center; justify-content: center; display: none; }
+        
+        /* Smaller font helper */
+        .text-xxs { font-size: 0.65rem; }
 
     </style>
 </head>
-<body class="theme-green flex items-center justify-center h-screen w-screen bg-black overflow-hidden">
-    
-    <div id="bgLayer" class="bg-layer"></div>
+<body>
+
+    <div class="bg-layer" id="bgLayer"></div>
     <div class="bg-overlay"></div>
     <div class="scanlines"></div>
 
-    <!-- START SCREEN -->
-    <div id="startScreen">
-        <div class="start-logo">CYBER<span class="text-white">HACK</span></div>
-        <div class="text-gray-500 font-mono text-xs mt-2">PROJECT: RELUCTANT_SON</div>
-        <button onclick="startStory()" class="cyber-btn mt-8 text-xl font-bold tracking-widest px-8 py-4">
-            INICIAR SISTEMA
-        </button>
-    </div>
-
-    <!-- STORY OVERLAY -->
-    <div id="storyOverlay">
-        <div id="storyBg" class="story-bg"></div>
-        <div class="story-dialog-box">
-            <!-- Avatar -->
-            <div class="story-avatar-container">
-                <img id="storyAvatar" src="" class="story-avatar" alt="Character" onerror="this.src='https://ui-avatars.com/api/?name=User&background=0D8ABC&color=fff'">
-            </div>
-            <!-- Text Content -->
-            <div class="story-content">
-                <div id="storySpeaker" class="story-speaker text-theme">MÃE</div>
-                <div id="storyText" class="story-text">...</div>
-                <div onclick="nextStory()" class="story-btn">CONTINUAR</div>
-            </div>
-        </div>
-    </div>
-
-    <!-- ENDING SELECTION -->
-    <div id="endingScreen">
-        <h1 class="text-3xl font-bold text-white mb-2 tracking-[0.5em] animate-pulse">SINGULARIDADE</h1>
-        <p class="text-gray-400 mb-8 max-w-md text-xs">O destino do sistema financeiro global está em suas mãos. Faça sua escolha.</p>
+    <div id="mainFrame">
         
-        <div class="w-full max-w-sm px-4">
-            <button onclick="chooseEnding('god')" class="ending-choice-btn god rounded">
-                <div class="text-lg font-bold mb-1 text-yellow-400">FUSÃO DIGITAL</div>
-                <div class="text-[10px] text-gray-500">Unir-se à Lori. Controlar o mercado. Sua mãe terá luxo eterno.</div>
-            </button>
-            <button onclick="chooseEnding('freedom')" class="ending-choice-btn free rounded">
-                <div class="text-lg font-bold mb-1 text-red-500">FORMATAR O MUNDO</div>
-                <div class="text-[10px] text-gray-500">Apagar todas as dívidas globais. O sistema colapsa. Liberdade total.</div>
-            </button>
-        </div>
-    </div>
-
-    <!-- EPILOGUE SCREEN -->
-    <div id="epilogueScreen" class="fixed inset-0 z-[400] bg-black hidden flex-col items-center justify-center p-8 text-center opacity-0 transition-opacity duration-[2000ms]">
-        <div class="text-5xl mb-4" id="epilogueIcon">🏁</div>
-        <h2 class="text-2xl font-bold text-white mb-4 tracking-widest" id="epilogueTitle">FIM</h2>
-        <p id="epilogueText" class="text-gray-300 font-mono mb-8 max-w-md text-xs leading-relaxed"></p>
-        <button onclick="location.reload()" class="cyber-btn px-6 py-2 text-sm">REINICIAR</button>
-    </div>
-
-    <!-- MAIN GAME -->
-    <div class="w-full max-w-md h-full flex flex-col relative z-20 backdrop-blur-md border-x border-gray-900 shadow-2xl transition-opacity duration-1000 opacity-0" id="mainFrame">
-        
-        <!-- LOCKOUT -->
-        <div id="lockoutScreen">
-            <div class="lockout-text">LOCKOUT</div>
-            <div class="text-white font-mono mt-2 text-center px-4 text-xs">Rastreamento Policial!<br>Perda: <span id="lostMoneyDisplay" class="text-red-400 font-bold">-$0</span></div>
-            <div id="lockoutTimer" class="text-2xl font-bold text-white mt-2 font-mono">10.0s</div>
-        </div>
-
-        <!-- HEADER (Compact for Mobile) -->
-        <div class="p-2 border-b border-gray-800" style="background-color: var(--panel-bg)">
-            <div class="flex justify-between items-center mb-1 text-[9px] uppercase font-bold text-gray-500">
-                <div class="flex items-center gap-1"><span class="text-red-500 flex items-center gap-1"><i data-lucide="siren" class="w-3 h-3"></i> RASTREIO</span></div>
+        <!-- HEADER -->
+        <div class="game-header">
+            <!-- Trace & Chips -->
+            <div class="flex justify-between items-center mb-1 text-[10px] font-bold text-gray-400">
+                <div class="flex items-center gap-1 text-red-500"><i data-lucide="siren" class="w-3 h-3"></i> TRACE</div>
+                <div id="chipDisplay" class="text-yellow-500 hidden">0 CHIPS</div>
             </div>
-            <div class="trace-container mb-2 relative group">
-                <div id="traceBar" class="trace-bar"></div>
+            
+            <div class="trace-bar-bg relative">
+                <div id="traceBar" class="trace-bar-fill"></div>
             </div>
 
-            <div class="flex justify-between items-center mb-2">
+            <!-- Stats Row -->
+            <div class="flex justify-between items-center mt-2 mb-2">
+                <!-- Lori -->
                 <div class="flex items-center gap-2">
-                    <div id="loriContainer" class="relative w-10 h-10 border border-theme rounded-full flex items-center justify-center bg-black overflow-hidden group shadow-lg transition-colors duration-300">
-                        <i id="loriIcon" data-lucide="bot" class="w-6 h-6 text-theme transition-colors duration-300"></i>
+                    <div id="loriContainer" class="w-10 h-10 border border-theme rounded-full bg-black flex items-center justify-center relative overflow-hidden transition-colors">
+                        <i id="loriIcon" data-lucide="bot" class="w-6 h-6 text-theme transition-colors"></i>
                     </div>
                     <div class="flex flex-col">
-                        <span class="text-[9px] text-gray-500 uppercase tracking-widest">Lori (IA)</span>
-                        <span id="loriMsg" class="text-[10px] text-white font-mono h-3 overflow-hidden w-40 whitespace-nowrap transition-colors duration-300 text-theme">Conectado.</span>
+                        <span class="text-[9px] text-gray-500 uppercase tracking-widest">Lori</span>
+                        <span id="loriMsg" class="text-[10px] text-theme font-mono h-3 w-32 overflow-hidden whitespace-nowrap">Conectado.</span>
                     </div>
                 </div>
+                <!-- Money -->
                 <div class="text-right">
-                    <div class="text-2xl font-bold font-mono text-theme flex items-center justify-end gap-1 text-shadow-glow">
-                        <span class="text-xs opacity-50">$</span>
-                        <span id="moneyDisplay">0</span>
+                    <div class="text-2xl font-bold font-mono text-theme flex items-center justify-end">
+                        <span class="text-xs opacity-50 mr-1">$</span><span id="moneyDisplay">0</span>
                     </div>
                 </div>
             </div>
 
-            <button id="clearLogsBtn" onclick="clearLogs()" class="w-full mb-2 py-1 text-[9px] font-mono border border-red-900 bg-red-900/10 text-red-400 hover:bg-red-900/30 rounded hidden flex items-center justify-center gap-2">
-                <i data-lucide="trash-2" class="w-3 h-3"></i> LIMPAR RASTROS (-$<span id="clearCost">100</span>)
+            <!-- Clear Log Button -->
+            <button id="clearLogsBtn" onclick="clearLogs()" class="w-full mb-2 py-1 text-[9px] font-mono border border-red-900 bg-red-900/10 text-red-400 rounded hidden flex items-center justify-center gap-1">
+                <i data-lucide="trash-2" class="w-3 h-3"></i> LIMPAR LOGS (-$<span id="clearCost">0</span>)
             </button>
-
-            <div class="w-full flex justify-center mb-1">
-                <div id="perkBadge" class="perk-badge hidden">
-                    <i id="perkIcon" data-lucide="zap" class="w-3 h-3"></i>
-                    <span id="perkText">BÔNUS ATIVO</span>
-                </div>
-            </div>
-
-            <div class="target-selector" id="targetList"></div>
+            
+            <!-- Target Scroll -->
+            <div class="target-scroll" id="targetList"></div>
         </div>
 
-        <!-- BATTLE (Flexible Height) -->
-        <div class="flex-grow flex flex-col items-center justify-center p-4 relative min-h-0">
-            <div class="absolute top-2 left-0 w-full px-4 flex justify-between items-end">
-                <div class="flex flex-col"><span class="text-[9px] text-gray-500 uppercase">Firewall</span><span id="streakDisplay" class="text-2xl font-bold text-theme font-mono drop-shadow-md">0<span class="text-xs text-gray-600">/10</span></span></div>
-                <div class="flex flex-col items-end"><span class="text-[9px] text-gray-500 uppercase">Chance</span><span id="chanceDisplay" class="text-lg font-bold text-theme drop-shadow-md">20%</span></div>
+        <!-- BATTLE (Flexible) -->
+        <div class="game-battle">
+            <!-- Stats -->
+            <div class="w-full flex justify-between px-2 text-[10px] text-gray-400 font-bold uppercase">
+                <div>Firewall <span id="streakDisplay" class="text-theme text-sm">0/10</span></div>
+                <div>Chance <span id="chanceDisplay" class="text-theme text-sm">20%</span></div>
             </div>
 
-            <!-- Scalable Core Area -->
-            <div class="relative w-32 h-32 md:w-48 md:h-48 my-4 flex-shrink-0 flex items-center justify-center">
-                <div id="scanLaser" class="scan-laser"></div> 
+            <!-- Core Animation (Scalable) -->
+            <div class="core-wrapper">
+                <div id="scanLaser" class="scan-laser"></div>
                 <div id="pulseRing" class="hidden"></div>
-                <div class="absolute inset-0 border-2 border-theme rounded-full opacity-20 animate-[spin_10s_linear_infinite]"></div>
-                <div class="absolute inset-2 border border-theme border-dashed rounded-full opacity-40 animate-[spin_15s_linear_infinite_reverse]"></div>
-                <div id="codeContainer" class="code-scroll-container"></div>
-                <!-- Core Container ID for resizing via CSS -->
-                <div class="absolute inset-2 border-4 border-gray-800 rounded-full bg-black flex items-center justify-center z-10 shadow-2xl transition-all duration-200" id="coreContainer">
-                    <i id="centerIcon" data-lucide="lock" class="w-12 h-12 md:w-16 md:h-16 text-gray-600 transition-colors"></i>
-                </div>
-                <div id="battleContainer" class="absolute -bottom-10 w-48 opacity-0 transition-opacity duration-300">
-                    <div class="flex justify-between text-[9px] text-gray-400 mb-1 font-mono"><span>INJECTING...</span><span>FIREWALL</span></div>
-                    <div class="battle-container rounded relative h-4">
-                        <div class="battle-center-marker"></div>
-                        <div id="battleBar" class="battle-bar-user"></div>
-                    </div>
+                
+                <!-- Rings -->
+                <div class="absolute inset-0 border-2 border-theme rounded-full opacity-20 animate-[spin_8s_linear_infinite]"></div>
+                <div class="absolute inset-2 border border-theme border-dashed rounded-full opacity-30 animate-[spin_12s_linear_infinite_reverse]"></div>
+                
+                <!-- Code BG -->
+                <div id="codeContainer" class="code-scroll-container rounded-full"></div>
+                
+                <!-- Lock Icon -->
+                <div id="coreIconContainer" class="absolute inset-4 border-2 border-gray-700 bg-black rounded-full flex items-center justify-center z-10 shadow-2xl transition-colors">
+                    <i id="centerIcon" data-lucide="lock" class="w-1/2 h-1/2 text-gray-600 transition-colors"></i>
                 </div>
             </div>
 
-            <div class="w-full relative mt-4">
-                <div id="btnFloaterAnchor" class="absolute top-0 left-0 w-full h-full pointer-events-none z-0"></div>
-                <button id="hackBtn" class="w-full relative z-10 group h-14 bg-black border border-gray-700 hover:border-theme transition-all overflow-hidden rounded-sm active:scale-[0.98] shadow-lg flex items-center justify-center gap-2">
-                    <div class="absolute inset-0 bg-theme opacity-0 group-hover:opacity-10 transition-opacity"></div>
-                    <i data-lucide="terminal" class="w-5 h-5 text-theme"></i>
-                    <span id="hackBtnText" class="text-theme font-bold tracking-[0.2em] text-lg">HACK</span>
-                    <div id="cooldownOverlay" class="absolute bottom-0 left-0 h-1 bg-theme w-0"></div>
+            <!-- Battle Bar -->
+            <div id="battleContainer" class="battle-progress-bg opacity-0 transition-opacity">
+                <div class="battle-center-line"></div>
+                <div id="battleBar" class="battle-progress-fill"></div>
+            </div>
+
+            <!-- Hack Button -->
+            <div class="w-full max-w-xs relative mt-2">
+                <div id="floatAnchor" class="absolute top-0 left-0 w-full h-full pointer-events-none"></div>
+                <button id="hackBtn" class="cyber-btn btn-main rounded" onclick="triggerHack()">
+                    <i data-lucide="terminal" class="w-4 h-4 mr-2"></i> 
+                    <span id="hackBtnText">HACK</span>
+                    <div id="cooldownBar" class="cooldown-bar"></div>
+                </button>
+            </div>
+
+            <!-- Sub Controls -->
+            <div class="w-full max-w-xs flex justify-between items-center mt-2 px-1">
+                <div class="text-[10px] text-gray-500 font-mono">Custo: <span id="costDisplay">0</span></div>
+                <button id="autoBtn" class="cyber-btn text-[10px] py-1 px-2 rounded border-gray-700 text-gray-500" onclick="toggleAuto()">
+                    AUTO: <span id="autoStatus">OFF</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- FOOTER (Upgrades) -->
+        <div class="game-footer">
+            <div class="grid grid-cols-3 gap-2">
+                <button onclick="buyUpgrade('luck')" id="btnLuck" class="cyber-btn text-xs py-2 flex flex-col gap-0.5 rounded bg-black/40">
+                    <i data-lucide="zap" class="w-3 h-3"></i>
+                    <span class="text-[8px]">SORTE</span>
+                    <span id="priceLuck" class="font-mono text-theme">$50</span>
+                </button>
+                <button onclick="buyUpgrade('value')" id="btnValue" class="cyber-btn text-xs py-2 flex flex-col gap-0.5 rounded bg-black/40">
+                    <i data-lucide="hard-drive" class="w-3 h-3"></i>
+                    <span class="text-[8px]">VALOR</span>
+                    <span id="priceValue" class="font-mono text-theme">$75</span>
+                </button>
+                <button onclick="buyUpgrade('speed')" id="btnSpeed" class="cyber-btn text-xs py-2 flex flex-col gap-0.5 rounded bg-black/40">
+                    <i data-lucide="clock" class="w-3 h-3"></i>
+                    <span class="text-[8px]">SPEED</span>
+                    <span id="priceSpeed" class="font-mono text-theme">$30</span>
                 </button>
             </div>
             
-            <div class="flex justify-between items-center w-full mt-2 px-1">
-                <div class="text-[9px] text-gray-400 font-mono">Custo: <span id="costDisplay">0</span></div>
-                <div class="flex gap-2">
-                    <button id="autoHackBtn" class="text-[9px] font-bold font-mono px-3 py-1 bg-gray-800 border border-gray-600 rounded text-gray-400 hover:bg-gray-700 transition-all flex items-center gap-1" onclick="toggleAuto()">
-                        <i data-lucide="zap" class="w-3 h-3"></i> AUTO: <span id="autoStatus">OFF</span>
-                    </button>
+            <!-- Dev Toggle -->
+            <button class="absolute bottom-2 right-2 p-2 opacity-20 hover:opacity-100" onclick="toggleDev()"><i data-lucide="bug" class="w-3 h-3 text-white"></i></button>
+        </div>
+
+        <!-- OVERLAYS -->
+        <div id="lockoutOverlay" class="hidden">
+            <div class="text-3xl font-bold text-red-500 animate-pulse">LOCKOUT</div>
+            <div class="text-white text-xs mt-2">SISTEMA COMPROMETIDO</div>
+            <div id="lockoutTimer" class="text-xl text-white font-mono mt-2">5.0s</div>
+        </div>
+        
+        <div id="storyOverlay" style="display: none;">
+            <div id="storyBg" class="story-bg"></div>
+            <div class="story-box">
+                <img id="storyAvatar" src="" class="story-av" onerror="this.src='https://ui-avatars.com/api/?name=User&background=000&color=fff'">
+                <div class="flex-1">
+                    <div id="storySpeaker" class="text-theme font-bold text-sm mb-1">...</div>
+                    <div id="storyText" class="text-gray-300 text-xs leading-relaxed min-h-[3rem]">...</div>
+                    <div class="text-right mt-2"><button onclick="nextStory()" class="cyber-btn text-[10px] py-1 px-3 inline-block">CONTINUAR</button></div>
                 </div>
             </div>
         </div>
+        
+        <div id="devPanel" class="hidden fixed top-10 right-2 bg-black border border-red-500 p-2 z-[200]">
+            <button class="block w-full text-left text-xs text-white p-1" onclick="state.money+=1000;updateUI()">+1000</button>
+        </div>
 
-        <!-- UPGRADES (Scrollable if needed on very small screens) -->
-        <div class="border-t border-gray-800 p-2 overflow-y-auto max-h-[25vh]" style="background-color: var(--panel-bg)">
-            <div class="grid grid-cols-3 gap-2">
-                <button onclick="buyUpgrade('luck')" id="btnLuck" class="cyber-btn text-xs py-2 flex flex-col items-center gap-1">
-                    <i data-lucide="zap" class="w-4 h-4"></i><span class="text-[9px]">SORTE</span><span id="priceLuck" class="font-mono">$50</span>
-                </button>
-                <button onclick="buyUpgrade('value')" id="btnValue" class="cyber-btn text-xs py-2 flex flex-col items-center gap-1">
-                    <i data-lucide="hard-drive" class="w-4 h-4"></i><span class="text-[9px]">VALOR</span><span id="priceValue" class="font-mono">$75</span>
-                </button>
-                <button onclick="buyUpgrade('speed')" id="btnSpeed" class="cyber-btn text-xs py-2 flex flex-col items-center gap-1">
-                    <i data-lucide="clock" class="w-4 h-4"></i><span class="text-[9px]">SPEED</span><span id="priceSpeed" class="font-mono">$30</span>
-                </button>
-            </div>
-        </div>
-        
-        <div id="particles" class="absolute inset-0 pointer-events-none z-50 overflow-hidden"></div>
-        
-        <!-- Dev Panel -->
-        <button class="fixed top-2 right-2 text-gray-700 hover:text-white z-50 p-2" onclick="toggleDevPanel()"><i data-lucide="bug" class="w-4 h-4"></i></button>
-        <div id="devPanel" class="hidden fixed top-10 right-2 bg-black/90 border border-red-500 p-2 z-[100] text-xs font-mono w-32">
-            <div class="text-red-500 mb-1 font-bold">DEV CHEATS</div>
-            <button class="block w-full text-left p-1 hover:bg-white/10" onclick="devAddMoney(1000)">+$1000</button>
-            <button class="block w-full text-left p-1 hover:bg-white/10" onclick="devMaxLuck()">Max Luck</button>
-        </div>
     </div>
 
     <script>
         lucide.createIcons();
 
-        // --- GLOBAL & CONFIG ---
-        const Haptic = {
-            click: () => { if(navigator.vibrate) navigator.vibrate(15); }, 
-            battleTick: () => { if(navigator.vibrate) navigator.vibrate(8); },
-            success: () => { if(navigator.vibrate) navigator.vibrate([30, 50, 30]); },
-            fail: () => { if(navigator.vibrate) navigator.vibrate(400); }, 
-            jackpot: () => { if(navigator.vibrate) navigator.vibrate([100, 50, 100, 50, 300]); }
-        };
-
+        // --- CONSTANTS ---
         const CHARACTERS = {
-            "MÃE": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&q=80",
-            "VOCÊ": "https://images.unsplash.com/photo-1511367461989-f85a21fda167?w=400&q=80",
-            "LORI (IA)": "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=400&q=80"
+            "MÃE": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200&q=80",
+            "VOCÊ": "https://images.unsplash.com/photo-1511367461989-f85a21fda167?w=200&q=80",
+            "LORI (IA)": "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=200&q=80"
         };
-
-        const STORY_DATA = {
-            intro: [
-                { speaker: "MÃE", text: "Filho, abre a porta! Eu sei que você está aí mexendo nesse computador velho!", img: "https://images.unsplash.com/photo-1555618559-9947844a425f?w=800&q=80" },
-                { speaker: "VOCÊ", text: "Mãe, já disse, estou estudando programação...", img: "https://images.unsplash.com/photo-1624138784181-dc7f5b75986d?w=800&q=80" },
-                { speaker: "MÃE", text: "Estudar não paga o aluguel! O gerente da fábrica disse que tem vaga. Larga isso e vai trabalhar!", img: "https://images.unsplash.com/photo-1555618559-9947844a425f?w=800&q=80" },
-                { speaker: "VOCÊ", text: "(Ela não entende. Achei um Cyberdeck militar no lixo. Se eu conseguir bypassar o firewall do caixa eletrônico...)", img: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=800&q=80" }
-            ],
-            unlock_bank: [
-                { speaker: "MÃE", text: "Filho? De onde veio esse dinheiro na mesa? Você não fez nada ilegal, fez?", img: "https://images.unsplash.com/photo-1555618559-9947844a425f?w=800&q=80" },
-                { speaker: "VOCÊ", text: "Fiz uns... bicos de TI, mãe. Consertei uns servidores.", img: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800&q=80" },
-                { speaker: "LORI (IA)", text: "Análise: Mentira com 89% de probabilidade. Acesso ao Banco Central detectado. Iniciando protocolo.", img: "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?w=800&q=80" }
-            ],
-            unlock_casino: [
-                { speaker: "VOCÊ", text: "Toma, mãe. Inscrição para aquele curso que você queria. E roupas novas.", img: "https://images.unsplash.com/photo-1596838132731-3301c3fd4317?w=800&q=80" },
-                { speaker: "MÃE", text: "Meu Deus... filho, estou preocupada. Vi carros pretos rondando o prédio. O que você está fazendo?", img: "https://images.unsplash.com/photo-1555618559-9947844a425f?w=800&q=80" },
-                { speaker: "VOCÊ", text: "Relaxa. Vou só tentar a sorte grande agora. O Cassino Royal tem uma falha no RNG.", img: "https://images.unsplash.com/photo-1596838132731-3301c3fd4317?w=800&q=80" }
-            ],
-            unlock_military: [
-                { speaker: "LORI (IA)", text: "ALERTA CRÍTICO. Rastreio governamental ativo. Assinatura térmica detectada no prédio.", img: "https://images.unsplash.com/photo-1542261777-4ad26125549a?w=800&q=80" },
-                { speaker: "VOCÊ", text: "Eles estão vindo. Preciso de poder de fogo. Se eu derrubar a Base Militar, posso apagar minha identidade.", img: "https://images.unsplash.com/photo-1542261777-4ad26125549a?w=800&q=80" }
-            ],
-            unlock_ai: [
-                { speaker: "MÃE", text: "Filho! A polícia está subindo as escadas! Foge pela janela!", img: "https://images.unsplash.com/photo-1555618559-9947844a425f?w=800&q=80" },
-                { speaker: "VOCÊ", text: "Não... eu não vou fugir. Vou reescrever a realidade. Só preciso do Núcleo. É tudo ou nada.", img: "https://images.unsplash.com/photo-1518770660439-4636190af475?w=800&q=80" }
-            ]
-        };
-
         const TARGETS = [
-            { id: 'atm', name: 'ATM Local', color: 'theme-green', baseReward: 10, unlockCost: 0, icon: 'credit-card', bg: 'https://images.unsplash.com/photo-1517502884422-41e157d4430c?w=400&q=80', perk: null },
-            { id: 'bank', name: 'Banco Central', color: 'theme-blue', baseReward: 50, unlockCost: 500, icon: 'building', bg: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=400&q=80', perk: { name: "Renda Passiva", desc: "+$5/s", icon: "coins" } },
-            { id: 'casino', name: 'Cassino Royal', color: 'theme-purple', baseReward: 200, unlockCost: 2000, icon: 'gem', bg: 'https://images.unsplash.com/photo-1516455207990-7a41ce80f7ee?w=400&q=80', perk: { name: "Aposta Crítica", desc: "Chance 5x", icon: "dices" } },
-            { id: 'military', name: 'Base Militar', color: 'theme-red', baseReward: 1000, unlockCost: 10000, icon: 'shield-alert', bg: 'https://images.unsplash.com/photo-1557683316-973673baf926?w=400&q=80', perk: { name: "Overclock", desc: "-30% Cooldown", icon: "zap" } },
-            { id: 'ai', name: 'Núcleo IA', color: 'theme-gold', baseReward: 5000, unlockCost: 50000, icon: 'cpu', bg: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=400&q=80', perk: { name: "Singularidade", desc: "+15% Chance", icon: "sparkles" } }
+            { id: 'atm', name: 'ATM', color: 'theme-green', baseReward: 10, unlockCost: 0, icon: 'credit-card', bg: 'https://images.unsplash.com/photo-1517502884422-41e157d4430c?w=400&q=80' },
+            { id: 'bank', name: 'BANCO', color: 'theme-blue', baseReward: 50, unlockCost: 500, icon: 'building', bg: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=400&q=80' },
+            { id: 'casino', name: 'CASSINO', color: 'theme-purple', baseReward: 200, unlockCost: 2000, icon: 'gem', bg: 'https://images.unsplash.com/photo-1516455207990-7a41ce80f7ee?w=400&q=80' },
+            { id: 'military', name: 'BASE', color: 'theme-red', baseReward: 1000, unlockCost: 10000, icon: 'shield-alert', bg: 'https://images.unsplash.com/photo-1557683316-973673baf926?w=400&q=80' },
+            { id: 'ai', name: 'IA CORE', color: 'theme-gold', baseReward: 5000, unlockCost: 50000, icon: 'cpu', bg: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=400&q=80' }
         ];
+        const STORY_DATA = {
+            intro: [{s:"MÃE",t:"Filho, a gente precisa desse dinheiro. Larga esse computador!"}, {s:"VOCÊ",t:"Mãe, confia em mim. Achei um jeito."}],
+            unlock_bank: [{s:"LORI (IA)",t:"Acesso bancário liberado. Cuidado com o rastro."}],
+            unlock_casino: [{s:"VOCÊ",t:"Cassino hackeado. O dinheiro está entrando."}],
+            unlock_military: [{s:"LORI (IA)",t:"Alerta! Nível de ameaça militar. Eles sabem."}, {s:"VOCÊ",t:"Preciso de mais poder para apagar os logs."}],
+            unlock_ai: [{s:"VOCÊ",t:"O núcleo final... É aqui que tudo muda."}]
+        };
+        const CODE_SNIPPETS = ["injecting...", "0x9F3A", "decrypt", "bypass", "root_access", "ping_ok"];
 
+        // --- STATE ---
         let state = {
             money: 0, streak: 0, chance: 20, hackCost: 0,
             currentTargetIndex: 0, unlockedTargets: 1, cooldown: 1200,
@@ -447,231 +358,58 @@
             costLuck: 50, costValue: 75, costSpeed: 30,
             autoMode: false, trace: 0
         };
-
         let isHacking = false, isCooldown = false, isLockout = false;
-        let currentStorySequence = [];
-        let storyStep = 0;
-        let typewriterTimeout;
+        let storyQueue = [], storyStep = 0;
 
-        // --- SAFE DOM HELPER ---
-        function setText(id, value) {
-            const el = document.getElementById(id);
-            if (el) el.innerText = value;
-        }
+        // --- DOM SAFE GETTER ---
+        const $ = (id) => document.getElementById(id);
+        const setText = (id, txt) => { const el = $(id); if(el) el.innerText = txt; }
 
-        // --- STORY ENGINE ---
+        // --- STORY ---
         function startStory() {
-            document.getElementById('startScreen').style.opacity = '0';
-            setTimeout(() => {
-                document.getElementById('startScreen').style.display = 'none';
-                playStorySequence(STORY_DATA.intro);
-            }, 500);
+            playStory(STORY_DATA.intro);
         }
-
-        function playStorySequence(sequence) {
-            currentStorySequence = sequence;
-            storyStep = 0;
-            if(sequence && sequence.length > 0) {
-                document.getElementById('storyOverlay').classList.add('active');
-                showStoryStep();
-            } else {
-                endStory();
-            }
+        function playStory(seq) {
+            storyQueue = seq; storyStep = 0;
+            $('storyOverlay').style.display = 'flex';
+            showStoryStep();
         }
-
         function showStoryStep() {
-            clearTimeout(typewriterTimeout);
-            const step = currentStorySequence[storyStep];
-            setText('storySpeaker', step.speaker);
-            document.getElementById('storySpeaker').className = `story-speaker ${step.speaker === 'MÃE' ? 'text-yellow-500' : (step.speaker === 'VOCÊ' ? 'text-blue-400' : 'text-green-500')}`;
-            
-            const textEl = document.getElementById('storyText');
-            if(textEl) textEl.innerHTML = ""; 
-            
-            const avatarUrl = CHARACTERS[step.speaker] || CHARACTERS["VOCÊ"]; 
-            const avatarEl = document.getElementById('storyAvatar');
-            if(avatarEl) avatarEl.src = avatarUrl;
-            
-            const bgEl = document.getElementById('storyBg');
-            if(bgEl) bgEl.style.backgroundImage = `url('${step.img}')`;
-
-            let i = 0;
-            const speed = 25;
-            
-            function type() {
-                if (textEl && i < step.text.length) {
-                    textEl.innerHTML += step.text.charAt(i);
-                    i++;
-                    typewriterTimeout = setTimeout(type, speed);
-                }
-            }
-            type();
+            const step = storyQueue[storyStep];
+            setText('storySpeaker', step.s);
+            setText('storyText', step.t);
+            $('storyAvatar').src = CHARACTERS[step.s] || CHARACTERS["VOCÊ"];
         }
-
         function nextStory() {
-            const textEl = document.getElementById('storyText');
-            const fullText = currentStorySequence[storyStep].text;
-            
-            if (textEl && textEl.innerHTML.length < fullText.length) {
-                clearTimeout(typewriterTimeout);
-                textEl.innerHTML = fullText;
-                return;
-            }
-
             storyStep++;
-            if(storyStep < currentStorySequence.length) {
-                showStoryStep();
-            } else {
-                endStory();
-            }
+            if(storyStep < storyQueue.length) showStoryStep();
+            else $('storyOverlay').style.display = 'none';
         }
 
-        function endStory() {
-            document.getElementById('storyOverlay').classList.remove('active');
-            document.getElementById('mainFrame').style.opacity = '1';
-            updateTheme();
-            
-            if (currentStorySequence === STORY_DATA.unlock_ai) {
-                document.getElementById('endingScreen').style.display = 'flex';
-            }
-        }
-        
-        function chooseEnding(type) {
-            document.getElementById('endingScreen').style.display = 'none';
-            const epilogue = document.getElementById('epilogueScreen');
-            epilogue.style.display = 'flex';
-            setTimeout(() => epilogue.style.opacity = '1', 50);
-            
-            const icon = document.getElementById('epilogueIcon');
-            const title = document.getElementById('epilogueTitle');
-            const text = document.getElementById('epilogueText');
-            
-            if(type === 'god') {
-                icon.innerText = "👁️";
-                title.innerText = "DEUS DA MÁQUINA";
-                title.style.color = "#ffd700";
-                text.innerText = "Você se fundiu à Lori. Sua consciência agora flui por todos os servidores do planeta. Sua mãe vive em uma mansão, protegida por drones invisíveis.";
-            } else {
-                icon.innerText = "🔥";
-                title.innerText = "REINICIALIZAÇÃO TOTAL";
-                title.style.color = "#ff003c";
-                text.innerText = "O vírus 'Zero_Day' apagou todos os registros bancários globais. O caos reina. Sua mãe está segura, mas o mundo queima.";
-            }
-        }
-
-        // --- VISUAL FX ---
-        function triggerVisuals() {
-            const hackBtnText = document.getElementById('hackBtnText');
-            const originalText = "INICIAR HACK";
-            const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%&*";
-            let iterations = 0;
-            const interval = setInterval(() => {
-                hackBtnText.innerText = originalText.split("").map((letter, index) => {
-                    if(index < iterations) return originalText[index];
-                    return chars[Math.floor(Math.random() * chars.length)];
-                }).join("");
-                if(iterations >= originalText.length) clearInterval(interval);
-                iterations += 1/2; 
-            }, 30);
-            
-            const laser = document.getElementById('scanLaser');
-            if (laser) {
-                laser.classList.add('active'); 
-                laser.style.opacity = '1';
-            }
-            
-            const icon = document.getElementById('centerIcon');
-            if (icon) icon.classList.add('glitch-active');
-            
-            const bg = document.getElementById('bgLayer');
-            if (bg) bg.style.transform = "scale(1.05)";
-        }
-
-        function stopVisuals() {
-             const btnText = document.getElementById('hackBtnText');
-             if(btnText) btnText.innerText = "INICIAR HACK";
-             
-             const laser = document.getElementById('scanLaser');
-             if (laser) {
-                 laser.classList.remove('active'); 
-                 laser.style.opacity = '0';
-             }
-             
-             const icon = document.getElementById('centerIcon');
-             if (icon) icon.classList.remove('glitch-active');
-             
-             const bg = document.getElementById('bgLayer');
-             if (bg) bg.style.transform = "scale(1)";
-        }
-
-        // --- CORE GAMEPLAY ---
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        function playSfx(type) {
-            if (audioCtx.state === 'suspended') audioCtx.resume();
-            const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
-            osc.connect(gain); gain.connect(audioCtx.destination);
-            const now = audioCtx.currentTime;
-            if(type==='click'){osc.type='triangle';osc.frequency.setValueAtTime(600,now);gain.gain.exponentialRampToValueAtTime(0.001,now+0.05);osc.start(now);osc.stop(now+0.05);}
-            if(type==='win'){osc.type='sine';osc.frequency.setValueAtTime(400,now);gain.gain.linearRampToValueAtTime(0,now+0.2);osc.start(now);osc.stop(now+0.2);}
-            if(type==='fail'){osc.type='sawtooth';osc.frequency.setValueAtTime(120,now);gain.gain.linearRampToValueAtTime(0,now+0.3);osc.start(now);osc.stop(now+0.3);}
-            if(type==='alarm'){osc.type='square';osc.frequency.setValueAtTime(800,now);gain.gain.linearRampToValueAtTime(0,now+0.5);osc.start(now);osc.stop(now+0.5);}
-        }
-
-        function updateUI() {
-            setText('moneyDisplay', Math.floor(state.money));
-            setText('streakDisplay', state.streak);
-            let dispChance = Math.min(95, state.chance + (state.currentTargetIndex === 4 ? 15 : 0));
-            setText('chanceDisplay', `${dispChance}%`);
-            setText('costDisplay', state.hackCost); 
-            updateBtn('btnLuck', 'priceLuck', state.costLuck, state.chance >= 95);
-            updateBtn('btnValue', 'priceValue', state.costValue, false);
-            updateBtn('btnSpeed', 'priceSpeed', state.costSpeed, state.cooldown <= 200);
-
-            const traceBar = document.getElementById('traceBar');
-            if(traceBar) traceBar.style.width = `${state.trace}%`;
-            
-            const clearBtn = document.getElementById('clearLogsBtn');
-            const clearCost = Math.floor(state.money * 0.1) + 10;
-            setText('clearCost', clearCost);
-            if(clearBtn) { if(state.trace > 0) clearBtn.classList.remove('hidden'); else clearBtn.classList.add('hidden'); }
-        }
-
-        function updateBtn(id, priceId, cost, max) {
-            const btn = document.getElementById(id);
-            const lbl = document.getElementById(priceId);
-            if(btn && lbl) {
-                if(max) { lbl.innerText = "MAX"; btn.disabled = true; }
-                else { lbl.innerText = `$${cost}`; btn.disabled = state.money < cost || isHacking || isCooldown || isLockout; }
-            }
-        }
-
+        // --- GAME LOGIC ---
         function renderTargets() {
-            const list = document.getElementById('targetList');
-            if(!list) return;
+            const list = $('targetList');
             list.innerHTML = '';
             TARGETS.forEach((t, idx) => {
-                const unlocked = idx < state.unlockedTargets;
-                const active = idx === state.currentTargetIndex;
                 const div = document.createElement('div');
-                let classes = `target-card ${active ? 'active' : ''}`;
-                if (!unlocked) { classes += ' locked'; if(idx === state.unlockedTargets) classes += ' unlockable'; }
-                div.className = classes;
-                div.innerHTML = `<img src="${t.bg}" /><div class="target-content">${unlocked ? `<i data-lucide="${t.icon}" class="w-4 h-4 text-theme drop-shadow-md"></i>` : `<i data-lucide="lock" class="w-4 h-4 text-gray-500"></i>`}</div>`;
+                const locked = idx >= state.unlockedTargets;
+                const active = idx === state.currentTargetIndex;
+                div.className = `target-card ${active ? 'active' : ''} ${locked ? 'locked' : ''} ${idx===state.unlockedTargets ? 'unlockable' : ''}`;
+                div.innerHTML = `<img src="${t.bg}" /><div class="target-content">${locked ? `<i data-lucide="lock" class="w-4 h-4 text-gray-500"></i>` : `<i data-lucide="${t.icon}" class="w-4 h-4 text-theme"></i>`}</div>`;
                 
                 div.onclick = () => {
-                    Haptic.click();
+                    if(navigator.vibrate) navigator.vibrate(10);
                     if(idx >= state.unlockedTargets) {
                         if(state.money >= TARGETS[idx].unlockCost) {
                             state.money -= TARGETS[idx].unlockCost;
                             state.unlockedTargets = Math.max(state.unlockedTargets, idx + 1);
                             state.currentTargetIndex = idx;
-                            
-                            if(idx === 1) playStorySequence(STORY_DATA.unlock_bank);
-                            else if(idx === 2) playStorySequence(STORY_DATA.unlock_casino);
-                            else if(idx === 3) playStorySequence(STORY_DATA.unlock_military);
-                            else if(idx === 4) playStorySequence(STORY_DATA.unlock_ai);
-                            else updateTheme();
-                        } else { setLori(`Falta $${TARGETS[idx].unlockCost - state.money}!`, 'error'); }
+                            if(idx === 1) playStory(STORY_DATA.unlock_bank);
+                            else if(idx === 2) playStory(STORY_DATA.unlock_casino);
+                            else if(idx === 3) playStory(STORY_DATA.unlock_military);
+                            else if(idx === 4) playStory(STORY_DATA.unlock_ai);
+                            updateTheme();
+                        } else setLori("Falta dinheiro!", "error");
                     } else { state.currentTargetIndex = idx; updateTheme(); }
                 };
                 list.appendChild(div);
@@ -681,131 +419,174 @@
 
         function updateTheme() {
             const t = TARGETS[state.currentTargetIndex];
-            document.body.classList.remove('theme-green', 'theme-blue', 'theme-purple', 'theme-red', 'theme-gold');
-            document.body.classList.add(t.color);
-            const centerIcon = document.getElementById('centerIcon');
-            if(centerIcon) centerIcon.setAttribute('data-lucide', t.icon);
-            const bgLayer = document.getElementById('bgLayer');
-            if(bgLayer) bgLayer.style.backgroundImage = `url('${t.bg}')`;
-            const perkBadge = document.getElementById('perkBadge');
-            if(t.perk && perkBadge) {
-                perkBadge.classList.remove('hidden');
-                document.getElementById('perkIcon').setAttribute('data-lucide', t.perk.icon);
-                setText('perkText', `${t.perk.name}`);
-            } else if(perkBadge) perkBadge.classList.add('hidden');
+            document.body.className = t.color + " flex items-center justify-center h-screen w-screen bg-black overflow-hidden";
+            $('bgLayer').style.backgroundImage = `url('${t.bg}')`;
+            $('centerIcon').setAttribute('data-lucide', t.icon);
             lucide.createIcons(); updateUI(); renderTargets();
         }
 
-        // --- HACK LOGIC ---
+        function updateUI() {
+            setText('moneyDisplay', Math.floor(state.money));
+            setText('streakDisplay', state.streak);
+            let chance = Math.min(95, state.chance + (state.currentTargetIndex===4 ? 15:0));
+            setText('chanceDisplay', `${chance}%`);
+            setText('costDisplay', state.hackCost);
+            
+            // Buttons
+            updateBtn('btnLuck', 'priceLuck', state.costLuck, state.chance >= 95);
+            updateBtn('btnValue', 'priceValue', state.costValue, false);
+            updateBtn('btnSpeed', 'priceSpeed', state.costSpeed, state.cooldown <= 200);
+
+            // Trace
+            $('traceBar').style.width = `${state.trace}%`;
+            const clearCost = Math.floor(state.money * 0.1) + 10;
+            setText('clearCost', clearCost);
+            if(state.trace > 0) $('clearLogsBtn').classList.remove('hidden'); 
+            else $('clearLogsBtn').classList.add('hidden');
+        }
+
+        function updateBtn(id, labelId, cost, max) {
+            const btn = $(id); const lbl = $(labelId);
+            if(max) { lbl.innerText="MAX"; btn.disabled=true; }
+            else { lbl.innerText=`$${cost}`; btn.disabled = state.money < cost || isHacking; }
+        }
+
         function triggerHack() {
             if(isLockout) return;
-            if(state.money < state.hackCost) { setLori("Fundos insuficientes.", "error"); if(state.autoMode) toggleAuto(); return; }
-            isHacking = true; state.money -= state.hackCost; playSfx('click'); Haptic.click();
-            triggerVisuals();
-            document.getElementById('hackBtn').classList.add('opacity-50', 'cursor-not-allowed');
-            document.getElementById('battleContainer').classList.remove('opacity-0');
-            document.getElementById('codeContainer').innerHTML = '';
-            for(let i=0; i<3; i++) {
-                const line = document.createElement('div'); line.className = 'code-line';
-                line.innerText = "> injecting_payload..."; document.getElementById('codeContainer').appendChild(line);
+            if(state.money < state.hackCost) { 
+                setLori("Sem fundos!", "error"); 
+                if(state.autoMode) toggleAuto(); 
+                return; 
             }
-            document.getElementById('codeContainer').style.opacity = '1';
+            
+            isHacking = true; state.money -= state.hackCost; 
+            if(navigator.vibrate && !state.autoMode) navigator.vibrate(15);
+            
+            // Visuals start
+            $('hackBtn').classList.add('opacity-50');
+            $('hackBtnText').innerText = "...";
+            $('battleContainer').style.opacity = '1';
+            $('pulseRing').classList.remove('hidden');
+            $('pulseRing').classList.add('pulse-effect');
+            $('scanLaser').classList.add('active'); $('scanLaser').style.opacity = '1';
+            $('centerIcon').classList.add('text-theme');
+            
+            // Code lines
+            $('codeContainer').innerHTML = ''; $('codeContainer').style.opacity = '1';
+            for(let i=0; i<3; i++) addCodeLine();
 
-            let chance = state.chance + (state.currentTargetIndex === 4 ? 15 : 0);
-            const win = Math.random() < (chance / 100);
             let duration = 0;
+            let chance = state.chance + (state.currentTargetIndex===4 ? 15 : 0);
+            const win = Math.random() < (chance/100);
+            
             const interval = setInterval(() => {
                 duration += 50;
-                if(!state.autoMode && duration % 150 === 0) playSfx('battle');
-                let randomPos = 30 + Math.random() * 40; 
-                document.getElementById('battleBar').style.width = `${randomPos}%`;
-
-                if(duration >= 1200) {
+                let rnd = 20 + Math.random() * 60;
+                $('battleBar').style.width = `${rnd}%`;
+                
+                if(duration >= 1000) { // 1s battle
                     clearInterval(interval);
-                    document.getElementById('battleBar').style.width = win ? '100%' : '0%';
-                    setTimeout(() => resolve(win), 300);
+                    $('battleBar').style.width = win ? '100%' : '0%';
+                    setTimeout(() => resolve(win), 200);
                 }
             }, 50);
         }
 
         function resolve(win) {
-            stopVisuals();
-            document.getElementById('battleContainer').classList.add('opacity-0');
-            document.getElementById('codeContainer').style.opacity = '0';
+            // Visuals stop
+            $('battleContainer').style.opacity = '0';
+            $('codeContainer').style.opacity = '0';
+            $('pulseRing').classList.add('hidden');
+            $('scanLaser').classList.remove('active'); $('scanLaser').style.opacity = '0';
+            $('centerIcon').classList.remove('text-theme');
 
             if(win) {
                 state.streak++;
                 let t = TARGETS[state.currentTargetIndex];
-                let reward = Math.floor(t.baseReward * (1 + (state.streak * 0.5) + (state.lvlValue * 0.2)));
+                let reward = Math.floor(t.baseReward * (1 + (state.streak*0.5) + (state.lvlValue*0.2)));
                 
-                if(state.currentTargetIndex === 2 && Math.random() < 0.05) reward *= 5; 
-                if(state.streak >= 10) { reward *= 5; state.streak = 0; playSfx('win'); Haptic.jackpot(); setLori("JACKPOT!", "jackpot"); }
-                else { playSfx('win'); if(!state.autoMode) Haptic.success(); setLori("Sucesso.", "success"); }
+                // Casino
+                if(state.currentTargetIndex===2 && Math.random() < 0.05) { reward *= 5; setLori("Sorte Grande!", "jackpot"); }
+                else if(state.streak >= 10) { reward *= 5; state.streak = 0; setLori("JACKPOT!", "jackpot"); if(navigator.vibrate && !state.autoMode) navigator.vibrate([50,50,50]); }
+                else setLori("Sucesso.", "success");
                 
                 state.money += reward;
                 spawnFloat(`+$${reward}`, 'text-theme');
-                addTrace(1);
+                addTrace(2);
             } else {
                 state.streak = 0;
-                playSfx('fail'); if(!state.autoMode) Haptic.fail(); setLori("Falha.", "error");
-                document.getElementById('mainFrame').classList.add('shake-hard');
-                setTimeout(() => document.getElementById('mainFrame').classList.remove('shake-hard'), 400);
-                addTrace(0.5);
+                setLori("Falha.", "error");
+                addTrace(1);
+                if(navigator.vibrate && !state.autoMode) navigator.vibrate(100);
             }
+            
             isHacking = false; updateUI(); startCooldown();
         }
 
         function startCooldown() {
             isCooldown = true;
             let cd = state.cooldown;
-            if(state.currentTargetIndex === 3) cd *= 0.7; 
-            const bar = document.getElementById('cooldownOverlay');
-            if(bar) { bar.style.transition = `width ${cd}ms linear`; bar.style.width = '0%'; }
+            if(state.currentTargetIndex===3) cd *= 0.7; // Military
+            const bar = $('cooldownBar');
+            bar.style.transition = `width ${cd}ms linear`; bar.style.width = '0%';
+            
             setTimeout(() => {
                 isCooldown = false;
-                if(bar) { bar.style.transition = 'none'; bar.style.width = '100%'; }
-                document.getElementById('hackBtn').classList.remove('opacity-50', 'cursor-not-allowed');
+                bar.style.transition = 'none'; bar.style.width = '100%';
+                $('hackBtn').classList.remove('opacity-50');
+                $('hackBtnText').innerText = "HACK";
                 if(state.autoMode && !isLockout) triggerHack();
             }, cd);
         }
 
-        // --- HELPERS ---
-        function addTrace(mult) {
-            state.trace = Math.min(100, state.trace + (state.currentTargetIndex + 1) * 3 * mult);
+        function addTrace(amt) {
+            state.trace = Math.min(100, state.trace + amt * (state.currentTargetIndex + 1));
             if(state.trace >= 100) triggerLockout();
             updateUI();
         }
+
         function triggerLockout() {
             isLockout = true; if(state.autoMode) toggleAuto();
             const pen = Math.floor(state.money * 0.3); state.money -= pen; state.trace = 0;
-            document.getElementById('lockoutScreen').classList.add('active');
-            setText('lostMoneyDisplay', `-$${pen}`);
-            playSfx('alarm');
-            setTimeout(() => {
-                document.getElementById('lockoutScreen').classList.remove('active');
-                isLockout = false; updateUI();
-            }, 10000);
+            $('lockoutScreen').style.display = 'flex';
+            $('lostMoneyDisplay').innerText = `-$${pen}`;
+            setTimeout(() => { $('lockoutScreen').style.display = 'none'; isLockout = false; updateUI(); }, 5000);
         }
+
         function clearLogs() {
-            let cost = Math.floor(state.money * 0.1) + 10;
-            if(state.money >= cost) { state.money -= cost; state.trace = 0; updateUI(); setLori("Logs limpos.", "success"); }
+            const cost = Math.floor(state.money * 0.1) + 10;
+            if(state.money >= cost) { state.money -= cost; state.trace = 0; updateUI(); setLori("Limpo.", "success"); }
         }
+
         function toggleAuto() {
             state.autoMode = !state.autoMode;
-            document.getElementById('autoHackBtn').classList.toggle('btn-auto-active');
-            setText('autoStatus', state.autoMode ? "ON" : "OFF");
+            $('autoBtn').className = `cyber-btn text-[10px] py-1 px-2 rounded ${state.autoMode ? 'bg-yellow-600 text-black border-yellow-500' : 'border-gray-700 text-gray-500'}`;
+            $('autoStatus').innerText = state.autoMode ? "ON" : "OFF";
             if(state.autoMode && !isHacking && !isLockout) triggerHack();
         }
-        function setLori(t, m) { setText('loriMsg', t); }
-        function spawnFloat(t, c) {
-            const el = document.createElement('div'); el.className = `btn-floater ${c}`; el.innerText = t;
-            document.getElementById('btnFloaterAnchor').appendChild(el); setTimeout(() => el.remove(), 1000);
+
+        function addCodeLine() {
+            const line = document.createElement('div'); line.className = 'code-line';
+            line.innerText = "> " + CODE_SNIPPETS[Math.floor(Math.random()*CODE_SNIPPETS.length)];
+            $('codeContainer').prepend(line);
+            if($('codeContainer').children.length > 5) $('codeContainer').lastChild.remove();
         }
-        function toggleDevPanel() { document.getElementById('devPanel').classList.toggle('hidden'); }
-        function devAddMoney(a) { state.money += a; updateUI(); }
-        function devUnlockAll() { state.unlockedTargets = 5; renderTargets(); }
-        function devMaxLuck() { state.chance = 95; updateUI(); }
-        function devReset() { location.reload(); }
+        
+        function spawnFloat(txt, cls) {
+            const el = document.createElement('div'); el.className = `floater ${cls}`; el.innerText = txt;
+            $('floatAnchor').appendChild(el); setTimeout(() => el.remove(), 800);
+        }
+
+        function setLori(txt, type) {
+            $('loriMsg').innerText = txt;
+            const icon = $('loriIcon');
+            if(type==='success') { icon.setAttribute('data-lucide', 'smile'); icon.classList.add('text-theme'); }
+            else if(type==='error') { icon.setAttribute('data-lucide', 'frown'); icon.classList.replace('text-theme', 'text-red-500'); }
+            else if(type==='jackpot') { icon.setAttribute('data-lucide', 'star'); icon.classList.replace('text-theme', 'text-yellow-400'); }
+            lucide.createIcons();
+            setTimeout(() => { icon.setAttribute('data-lucide', 'bot'); icon.classList.remove('text-red-500', 'text-yellow-400'); icon.classList.add('text-theme'); lucide.createIcons(); }, 1500);
+        }
+
         function buyUpgrade(type) {
             if(type==='luck' && state.money >= state.costLuck) { state.money-=state.costLuck; state.chance=Math.min(95,state.chance+5); state.costLuck=Math.floor(state.costLuck*1.5); }
             else if(type==='value' && state.money >= state.costValue) { state.money-=state.costValue; state.lvlValue++; state.costValue=Math.floor(state.costValue*1.5); }
@@ -813,13 +594,14 @@
             updateUI();
         }
 
-        // Passive Income
-        setInterval(() => { if(state.currentTargetIndex===1 && !isHacking && !isLockout) { state.money+=5; updateUI(); } }, 1000);
+        // Dev tools
+        function toggleDev() { $('devPanel').classList.toggle('hidden'); }
+        function devAddMoney(a) { state.money += a; updateUI(); }
+        function devUnlockAll() { state.unlockedTargets = 5; renderTargets(); }
+        function devMaxLuck() { state.chance = 95; updateUI(); }
 
-        document.getElementById('hackBtn').addEventListener('click', () => { if(!isHacking && !isCooldown) triggerHack(); });
-        
-        // Initial
-        updateTheme();
+        // Start
+        setTimeout(() => { startStory(); }, 500);
     </script>
 </body>
 </html>
