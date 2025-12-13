@@ -2,8 +2,8 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>CyberHack: Mobile Fix</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CyberHack: Stable Story</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
@@ -20,13 +20,10 @@
             font-family: 'Rajdhani', sans-serif;
             background-color: var(--bg-dark);
             color: var(--primary);
-            overflow: hidden; /* Impede rolagem da página inteira */
-            user-select: none;
-            touch-action: none; /* Impede zoom e pan */
-            position: fixed; /* Trava o body no iOS */
-            width: 100%;
-            height: 100%;
-            top: 0; left: 0;
+            min-height: 100vh;
+            /* Revertido para rolagem normal para garantir que tudo apareça */
+            overflow-y: auto; 
+            overflow-x: hidden;
         }
 
         /* Themes & Colors */
@@ -42,137 +39,133 @@
 
         /* Background */
         .bg-layer {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background-size: cover; background-position: center;
-            z-index: 0; transition: background-image 0.5s ease-in-out;
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background-size: cover; background-position: center; background-repeat: no-repeat;
+            z-index: -1; transition: background-image 0.5s ease-in-out;
             filter: blur(3px) brightness(0.7); 
         }
         .bg-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: radial-gradient(circle, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.9) 100%);
-            z-index: 1; pointer-events: none;
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: radial-gradient(circle, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.95) 100%);
+            z-index: 0; pointer-events: none;
         }
         .scanlines {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
             background: linear-gradient(to bottom, rgba(255,255,255,0) 50%, rgba(0,0,0,0.1) 50%);
             background-size: 100% 4px; pointer-events: none; z-index: 50; opacity: 0.3;
         }
 
-        /* Layout Principal */
+        /* Container Principal */
         #mainFrame {
-            position: relative; z-index: 20;
+            position: relative; z-index: 10;
             display: flex; flex-direction: column;
-            height: 100%; width: 100%; max-width: 480px; margin: 0 auto;
+            min-height: 100vh; width: 100%; max-width: 480px; margin: 0 auto;
             background-color: var(--panel-bg);
             border-left: 1px solid #333; border-right: 1px solid #333;
-            transition: border-color 0.5s;
+            padding-bottom: 20px; /* Espaço extra no final */
         }
 
-        /* Seções Flexíveis */
-        .game-header { flex: 0 0 auto; padding: 0.5rem; border-bottom: 1px solid #333; background: rgba(0,0,0,0.6); }
-        .game-footer { flex: 0 0 auto; padding: 0.5rem; border-top: 1px solid #333; background: rgba(0,0,0,0.6); padding-bottom: max(0.5rem, env(safe-area-inset-bottom)); }
-        
-        /* A área de batalha cresce e encolhe conforme necessário */
-        .game-battle { 
-            flex: 1 1 auto; 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            justify-content: space-evenly; /* Distribui espaço verticalmente */
-            position: relative;
-            overflow: hidden;
-            padding: 0.5rem;
-            min-height: 0; /* Permite encolher abaixo do conteúdo mínimo se precisar */
+        /* HEADER & MAPAS */
+        .game-header {
+            position: sticky; top: 0; z-index: 30;
+            background-color: rgba(10, 10, 10, 0.95);
+            border-bottom: 1px solid #333;
+            padding: 1rem;
         }
 
-        /* Responsive Core Size */
-        .core-wrapper {
-            position: relative;
-            /* Tamanho dinâmico baseado na altura da tela */
-            width: min(45vw, 25vh); 
-            height: min(45vw, 25vh);
-            max-width: 200px; max-height: 200px;
+        /* Target Cards - Estilo Robusto */
+        .target-selector {
+            display: flex; gap: 10px; overflow-x: auto; padding: 10px 0;
+            width: 100%; white-space: nowrap;
+            /* Garante altura */
+            min-height: 80px; 
+            -webkit-overflow-scrolling: touch;
+        }
+        .target-card {
+            flex: 0 0 90px; height: 60px; /* Tamanho Fixo */
+            border: 1px solid #444; background: #000;
+            position: relative; overflow: hidden; border-radius: 6px;
             display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: all 0.2s;
         }
-
-        /* Animations & Effects */
-        .pulse-effect { position: absolute; width: 100%; height: 100%; border-radius: 50%; border: 2px solid var(--primary); animation: pulseRing 1s cubic-bezier(0.215, 0.61, 0.355, 1) infinite; }
-        @keyframes pulseRing { 0% { transform: scale(1); opacity: 0.5; } 100% { transform: scale(1.5); opacity: 0; } }
+        .target-card.active { border-color: var(--primary); transform: scale(1.05); box-shadow: 0 0 10px var(--primary); z-index: 5; }
+        .target-card.locked { filter: grayscale(100%); border-style: dashed; opacity: 0.5; }
+        .target-card.unlockable { border-color: #ffd700; box-shadow: 0 0 5px #ffd700; animation: pulse 2s infinite; }
         
-        .code-scroll-container { 
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); 
-            width: 100%; height: 100%; overflow: hidden; z-index: 5; opacity: 0; 
-            background: radial-gradient(circle, rgba(0,0,0,0.9) 30%, rgba(0,0,0,0) 70%); 
-            display: flex; flex-direction: column-reverse; align-items: center; 
-            mask-image: linear-gradient(to top, black 20%, transparent 100%);
+        .target-card img {
+            position: absolute; width: 100%; height: 100%; object-fit: cover; opacity: 0.5;
         }
-        .code-line { 
-            font-family: 'Share Tech Mono', monospace; font-size: 10px; color: var(--primary); 
-            text-shadow: 0 0 4px var(--primary); width: 100%; text-align: center; white-space: nowrap; 
-            animation: riseUp 0.3s ease-out forwards; 
-        }
-        @keyframes riseUp { 0% { opacity: 0; transform: translateY(10px); } 100% { opacity: 0.8; transform: translateY(0); } }
+        .target-content { position: relative; z-index: 2; }
 
-        .scan-laser {
-            position: absolute; left: 0; width: 100%; height: 2px;
-            background: var(--primary); box-shadow: 0 0 10px var(--primary);
-            z-index: 20; opacity: 0; pointer-events: none;
+        /* Battle Area */
+        .game-battle {
+            flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            padding: 1rem; min-height: 400px;
         }
-        .scan-laser.active { animation: scan-move 0.8s linear infinite; }
-        @keyframes scan-move { 0% { top: 0%; opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { top: 100%; opacity: 0; } }
 
-        /* UI Components */
-        .trace-bar-bg { width: 100%; height: 4px; background: #333; border-radius: 2px; overflow: hidden; margin-top: 4px; }
-        .trace-bar-fill { height: 100%; background: var(--trace); width: 0%; transition: width 0.2s; box-shadow: 0 0 5px var(--trace); }
+        /* Core Animation */
+        .core-wrapper { position: relative; width: 200px; height: 200px; display: flex; align-items: center; justify-content: center; margin: 20px 0; }
+        #coreContainer {
+            position: absolute; inset: 10px; border: 4px solid #333;
+            background: #000; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; z-index: 10;
+        }
         
-        .battle-progress-bg { width: 80%; height: 16px; background: #111; border: 1px solid #333; position: relative; margin-top: 10px; border-radius: 4px; overflow: hidden; }
-        .battle-progress-fill { height: 100%; background: var(--primary); width: 50%; box-shadow: 0 0 10px var(--primary); transition: width 0.05s linear; }
-        .battle-center-line { position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: rgba(255,255,255,0.5); z-index: 2; }
-
-        .target-scroll { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
-        .target-card { flex: 0 0 70px; height: 50px; border: 1px solid #333; background: #000; position: relative; border-radius: 4px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-        .target-card.active { border-color: var(--primary); transform: scale(1.05); }
-        .target-card > img { position: absolute; width: 100%; height: 100%; object-fit: cover; opacity: 0.4; }
-        .target-content { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; }
-
+        /* Elements */
         .cyber-btn {
             background: rgba(0,0,0,0.6); border: 1px solid var(--primary); color: var(--primary);
             font-family: 'Share Tech Mono', monospace; text-transform: uppercase;
-            padding: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center;
-            transition: all 0.1s;
+            transition: all 0.1s; cursor: pointer; display: flex; align-items: center; justify-content: center;
         }
         .cyber-btn:active { transform: scale(0.96); background: var(--primary); color: black; }
-        .cyber-btn:disabled { opacity: 0.4; filter: grayscale(100%); cursor: not-allowed; }
-
-        .btn-main {
-            width: 100%; height: 50px; /* Altura fixa confortável */
-            font-size: 1.1rem; font-weight: bold; letter-spacing: 2px;
-            position: relative; overflow: hidden;
-        }
-        .cooldown-bar { position: absolute; bottom: 0; left: 0; height: 3px; background: var(--primary); width: 0%; }
-
-        /* Floating Text */
-        .floater { position: absolute; left: 50%; transform: translateX(-50%); pointer-events: none; animation: floatUp 0.8s forwards; font-weight: bold; z-index: 50; white-space: nowrap; }
-        @keyframes floatUp { 0% { bottom: 60px; opacity: 0; transform: translateX(-50%) scale(0.5); } 20% { opacity: 1; transform: translateX(-50%) scale(1.2); } 100% { bottom: 120px; opacity: 0; transform: translateX(-50%) scale(1); } }
-
-        /* Modals */
-        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 100; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
-        .modal-overlay.active { opacity: 1; pointer-events: all; }
-        .modal-box { background: #111; border: 1px solid var(--primary); padding: 20px; max-width: 300px; text-align: center; box-shadow: 0 0 30px rgba(0,0,0,0.5); }
+        .cyber-btn:disabled { opacity: 0.5; cursor: not-allowed; border-color: #555; color: #555; }
+        
+        .btn-main { width: 100%; height: 60px; font-size: 1.2rem; font-weight: bold; position: relative; overflow: hidden; }
+        
+        /* Bars */
+        .trace-container { width: 100%; height: 6px; background: #333; margin-top: 4px; border-radius: 3px; overflow: hidden; }
+        .trace-bar { height: 100%; background: var(--trace); width: 0%; box-shadow: 0 0 10px var(--trace); transition: width 0.2s linear; }
+        .battle-container { width: 100%; height: 20px; background: #111; border: 1px solid #333; position: absolute; bottom: -20px; }
+        .battle-bar-user { height: 100%; background: var(--primary); width: 50%; transition: width 0.05s linear; }
 
         /* Story Overlay */
-        #storyOverlay { position: fixed; inset: 0; z-index: 200; background: black; display: none; flex-direction: column; justify-content: flex-end; }
-        .story-box { margin: 15px; padding: 15px; background: rgba(10,10,10,0.95); border: 1px solid var(--primary); border-radius: 8px; display: flex; gap: 10px; }
-        .story-av { width: 60px; height: 60px; border: 1px solid var(--primary); border-radius: 4px; object-fit: cover; background: #000; flex-shrink: 0; }
-        
-        .glitch-active { animation: glitch 0.2s infinite; color: #fff; }
-        @keyframes glitch { 0% { transform: translate(0); } 20% { transform: translate(-2px, 2px); } 40% { transform: translate(-2px, -2px); } 60% { transform: translate(2px, 2px); } 80% { transform: translate(2px, -2px); } 100% { transform: translate(0); } }
+        #storyOverlay {
+            position: fixed; inset: 0; z-index: 200; background: black;
+            display: none; flex-direction: column; justify-content: flex-end;
+        }
+        .story-dialog-box {
+            margin: 20px; background: rgba(0, 10, 0, 0.95); border: 2px solid var(--primary);
+            padding: 15px; border-radius: 8px; display: flex; gap: 15px;
+        }
+        .story-avatar-container { width: 70px; height: 70px; border: 2px solid var(--primary); border-radius: 8px; overflow: hidden; flex-shrink: 0; }
+        .story-avatar { width: 100%; height: 100%; object-fit: cover; }
 
         /* Lockout */
-        #lockoutOverlay { position: absolute; inset: 0; background: rgba(200,0,0,0.2); backdrop-filter: blur(4px); z-index: 60; display: flex; flex-direction: column; align-items: center; justify-content: center; display: none; }
+        #lockoutScreen { position: absolute; inset: 0; background: rgba(200, 0, 0, 0.2); backdrop-filter: blur(5px); z-index: 60; display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
+        #lockoutScreen.active { opacity: 1; pointer-events: all; }
+
+        /* Ending */
+        #endingScreen { position: fixed; inset: 0; z-index: 300; background: black; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px; text-align: center; }
         
-        /* Smaller font helper */
-        .text-xxs { font-size: 0.65rem; }
+        /* Utils */
+        .hidden { display: none !important; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } }
+        .pulse-effect { position: absolute; width: 100%; height: 100%; border-radius: 50%; border: 2px solid var(--primary); animation: pulseRing 1s infinite; }
+        @keyframes pulseRing { 0% { transform: scale(1); opacity: 0.5; } 100% { transform: scale(1.5); opacity: 0; } }
+        
+        .code-scroll-container { position: absolute; width: 120%; height: 120%; opacity: 0; display: flex; flex-direction: column-reverse; align-items: center; overflow: hidden; z-index: 5; mask-image: radial-gradient(circle, black 40%, transparent 80%); }
+        .code-line { font-family: monospace; font-size: 10px; color: var(--primary); animation: riseUp 0.5s linear forwards; }
+        @keyframes riseUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(-20px); opacity: 1; } }
+        
+        .scan-laser { position: absolute; top: 0; left: 0; width: 100%; height: 2px; background: white; opacity: 0; z-index: 20; }
+        .scan-laser.active { opacity: 0.8; animation: scan 1s infinite linear; }
+        @keyframes scan { 0% { top: 0%; } 100% { top: 100%; } }
+
+        .btn-auto-active { background-color: #d97706 !important; border-color: #fbbf24 !important; color: #fff !important; }
+
+        /* Floater */
+        .floater { position: absolute; left: 50%; transform: translateX(-50%); animation: floatUp 1s forwards; font-weight: bold; font-family: monospace; pointer-events: none; z-index: 50; }
+        @keyframes floatUp { from { bottom: 80px; opacity: 1; } to { bottom: 150px; opacity: 0; } }
 
     </style>
 </head>
@@ -182,145 +175,153 @@
     <div class="bg-overlay"></div>
     <div class="scanlines"></div>
 
+    <!-- START SCREEN -->
+    <div id="startScreen" class="fixed inset-0 z-50 bg-black flex flex-col items-center justify-center">
+        <h1 class="text-5xl font-bold text-white mb-2 tracking-widest" style="font-family: 'Share Tech Mono'">CYBER<span class="text-green-500">HACK</span></h1>
+        <div class="text-gray-500 font-mono text-sm mb-8">PROJECT: RELUCTANT_SON</div>
+        <button onclick="startStory()" class="cyber-btn px-8 py-4 text-xl font-bold rounded">INICIAR SISTEMA</button>
+    </div>
+
+    <!-- STORY OVERLAY -->
+    <div id="storyOverlay">
+        <div class="absolute inset-0 bg-black opacity-50"></div>
+        <div class="story-dialog-box relative z-10">
+            <div class="story-avatar-container">
+                <img id="storyAvatar" class="story-avatar" src="" onerror="this.style.backgroundColor='#333'">
+            </div>
+            <div style="flex:1">
+                <div id="storySpeaker" class="font-bold text-lg mb-1 text-theme">...</div>
+                <div id="storyText" class="text-gray-300 text-sm font-mono leading-relaxed min-h-[3rem]">...</div>
+                <div class="text-right mt-2"><button onclick="nextStory()" class="cyber-btn text-xs py-1 px-3 inline-block rounded">CONTINUAR</button></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ENDING SCREEN -->
+    <div id="endingScreen">
+        <h1 class="text-4xl font-bold text-white mb-4 tracking-widest animate-pulse">SINGULARIDADE</h1>
+        <p class="text-gray-400 mb-8 max-w-xs text-sm">O núcleo da IA está sob seu controle. O destino global em suas mãos.</p>
+        <button onclick="chooseEnding('god')" class="w-full max-w-xs p-4 mb-4 border border-yellow-500 bg-yellow-900/20 text-yellow-500 font-bold hover:bg-yellow-900/40 rounded text-left">
+            FUSÃO DIGITAL<br><span class="text-xs font-normal text-gray-400">Unir-se à Lori. Luxo eterno para sua mãe.</span>
+        </button>
+        <button onclick="chooseEnding('freedom')" class="w-full max-w-xs p-4 border border-red-500 bg-red-900/20 text-red-500 font-bold hover:bg-red-900/40 rounded text-left">
+            REINICIAR O MUNDO<br><span class="text-xs font-normal text-gray-400">Apagar todas as dívidas. Caos e liberdade.</span>
+        </button>
+    </div>
+
+    <!-- MAIN GAME -->
     <div id="mainFrame">
         
-        <!-- HEADER -->
-        <div class="game-header">
-            <!-- Trace & Chips -->
-            <div class="flex justify-between items-center mb-1 text-[10px] font-bold text-gray-400">
-                <div class="flex items-center gap-1 text-red-500"><i data-lucide="siren" class="w-3 h-3"></i> TRACE</div>
-                <div id="chipDisplay" class="text-yellow-500 hidden">0 CHIPS</div>
-            </div>
-            
-            <div class="trace-bar-bg relative">
-                <div id="traceBar" class="trace-bar-fill"></div>
-            </div>
-
-            <!-- Stats Row -->
-            <div class="flex justify-between items-center mt-2 mb-2">
-                <!-- Lori -->
-                <div class="flex items-center gap-2">
-                    <div id="loriContainer" class="w-10 h-10 border border-theme rounded-full bg-black flex items-center justify-center relative overflow-hidden transition-colors">
-                        <i id="loriIcon" data-lucide="bot" class="w-6 h-6 text-theme transition-colors"></i>
-                    </div>
-                    <div class="flex flex-col">
-                        <span class="text-[9px] text-gray-500 uppercase tracking-widest">Lori</span>
-                        <span id="loriMsg" class="text-[10px] text-theme font-mono h-3 w-32 overflow-hidden whitespace-nowrap">Conectado.</span>
-                    </div>
-                </div>
-                <!-- Money -->
-                <div class="text-right">
-                    <div class="text-2xl font-bold font-mono text-theme flex items-center justify-end">
-                        <span class="text-xs opacity-50 mr-1">$</span><span id="moneyDisplay">0</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Clear Log Button -->
-            <button id="clearLogsBtn" onclick="clearLogs()" class="w-full mb-2 py-1 text-[9px] font-mono border border-red-900 bg-red-900/10 text-red-400 rounded hidden flex items-center justify-center gap-1">
-                <i data-lucide="trash-2" class="w-3 h-3"></i> LIMPAR LOGS (-$<span id="clearCost">0</span>)
-            </button>
-            
-            <!-- Target Scroll -->
-            <div class="target-scroll" id="targetList"></div>
+        <!-- LOCKOUT -->
+        <div id="lockoutScreen">
+            <div class="text-4xl font-bold text-red-500 animate-pulse mb-2">LOCKOUT</div>
+            <div class="text-white font-mono text-center">Polícia Detectada!<br>Perda: <span id="lostMoneyDisplay" class="text-red-400 font-bold">-$0</span></div>
+            <div id="lockoutTimer" class="text-2xl font-bold text-white mt-4 font-mono">10.0s</div>
         </div>
 
-        <!-- BATTLE (Flexible) -->
-        <div class="game-battle">
-            <!-- Stats -->
-            <div class="w-full flex justify-between px-2 text-[10px] text-gray-400 font-bold uppercase">
-                <div>Firewall <span id="streakDisplay" class="text-theme text-sm">0/10</span></div>
-                <div>Chance <span id="chanceDisplay" class="text-theme text-sm">20%</span></div>
+        <!-- HEADER -->
+        <div class="game-header">
+            <!-- Trace -->
+            <div class="flex justify-between text-xs font-bold text-gray-400 mb-1">
+                <span class="text-red-500 flex items-center gap-1"><i data-lucide="siren" class="w-3 h-3"></i> RASTREIO</span>
+            </div>
+            <div class="trace-container mb-3 relative">
+                <div id="traceBar" class="trace-bar"></div>
             </div>
 
-            <!-- Core Animation (Scalable) -->
+            <!-- Stats -->
+            <div class="flex justify-between items-center mb-3">
+                <div class="flex items-center gap-3">
+                    <div id="loriContainer" class="w-10 h-10 border border-theme rounded-full bg-black flex items-center justify-center overflow-hidden">
+                        <i id="loriIcon" data-lucide="bot" class="w-6 h-6 text-theme"></i>
+                    </div>
+                    <div class="flex flex-col">
+                        <span class="text-[10px] text-gray-500 uppercase tracking-widest">Lori</span>
+                        <span id="loriMsg" class="text-xs font-mono h-4 overflow-hidden w-40 whitespace-nowrap text-theme">Online.</span>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <div class="text-3xl font-bold font-mono text-theme flex items-center justify-end">
+                        <span class="text-sm opacity-50 mr-1">$</span><span id="moneyDisplay">0</span>
+                    </div>
+                </div>
+            </div>
+            
+            <button id="clearLogsBtn" onclick="clearLogs()" class="w-full mb-2 py-1 text-xs font-mono border border-red-900 bg-red-900/10 text-red-400 rounded hidden">
+                LIMPAR LOGS (-$<span id="clearCost">0</span>)
+            </button>
+
+            <div id="perkBadge" class="w-full text-center mb-2 hidden">
+                <span class="text-[10px] bg-black/50 border border-theme text-theme px-2 py-1 rounded font-bold uppercase" id="perkText">BÔNUS</span>
+            </div>
+
+            <!-- MAP LIST (Robust Container) -->
+            <div class="target-selector" id="targetList">
+                <!-- JS will fill this -->
+            </div>
+        </div>
+
+        <!-- BATTLE AREA -->
+        <div class="game-battle">
+            <div class="w-full flex justify-between px-2 text-xs text-gray-400 font-bold uppercase mb-4">
+                <div>Firewall <span id="streakDisplay" class="text-theme">0/10</span></div>
+                <div>Chance <span id="chanceDisplay" class="text-theme">20%</span></div>
+            </div>
+
+            <!-- CORE -->
             <div class="core-wrapper">
                 <div id="scanLaser" class="scan-laser"></div>
                 <div id="pulseRing" class="hidden"></div>
-                
-                <!-- Rings -->
-                <div class="absolute inset-0 border-2 border-theme rounded-full opacity-20 animate-[spin_8s_linear_infinite]"></div>
-                <div class="absolute inset-2 border border-theme border-dashed rounded-full opacity-30 animate-[spin_12s_linear_infinite_reverse]"></div>
-                
-                <!-- Code BG -->
+                <div class="absolute inset-0 border-2 border-theme rounded-full opacity-20 animate-spin" style="animation-duration: 10s;"></div>
                 <div id="codeContainer" class="code-scroll-container rounded-full"></div>
                 
-                <!-- Lock Icon -->
-                <div id="coreIconContainer" class="absolute inset-4 border-2 border-gray-700 bg-black rounded-full flex items-center justify-center z-10 shadow-2xl transition-colors">
-                    <i id="centerIcon" data-lucide="lock" class="w-1/2 h-1/2 text-gray-600 transition-colors"></i>
+                <div id="coreContainer">
+                    <i id="centerIcon" data-lucide="lock" class="w-16 h-16 text-gray-600 transition-colors"></i>
+                </div>
+
+                <div id="battleContainer" class="battle-container opacity-0 transition-opacity">
+                    <div style="position:absolute; left:50%; top:0; bottom:0; width:1px; background:white; z-index:10;"></div>
+                    <div id="battleBar" class="battle-bar-user"></div>
                 </div>
             </div>
 
-            <!-- Battle Bar -->
-            <div id="battleContainer" class="battle-progress-bg opacity-0 transition-opacity">
-                <div class="battle-center-line"></div>
-                <div id="battleBar" class="battle-progress-fill"></div>
-            </div>
-
-            <!-- Hack Button -->
-            <div class="w-full max-w-xs relative mt-2">
-                <div id="floatAnchor" class="absolute top-0 left-0 w-full h-full pointer-events-none"></div>
+            <!-- ACTION -->
+            <div class="w-full max-w-xs relative mt-8">
+                <div id="btnFloaterAnchor" class="absolute top-0 left-0 w-full h-full pointer-events-none"></div>
                 <button id="hackBtn" class="cyber-btn btn-main rounded" onclick="triggerHack()">
-                    <i data-lucide="terminal" class="w-4 h-4 mr-2"></i> 
+                    <i data-lucide="terminal" class="w-5 h-5 mr-2"></i> 
                     <span id="hackBtnText">HACK</span>
-                    <div id="cooldownBar" class="cooldown-bar"></div>
+                    <div id="cooldownBar" class="absolute bottom-0 left-0 h-1 bg-theme w-0"></div>
                 </button>
             </div>
-
-            <!-- Sub Controls -->
-            <div class="w-full max-w-xs flex justify-between items-center mt-2 px-1">
-                <div class="text-[10px] text-gray-500 font-mono">Custo: <span id="costDisplay">0</span></div>
-                <button id="autoBtn" class="cyber-btn text-[10px] py-1 px-2 rounded border-gray-700 text-gray-500" onclick="toggleAuto()">
+            
+            <div class="flex justify-between items-center w-full max-w-xs mt-3">
+                <div class="text-xs text-gray-500 font-mono"></div>
+                <button id="autoHackBtn" class="cyber-btn text-xs py-1 px-3 rounded border-gray-700 text-gray-500" onclick="toggleAuto()">
                     AUTO: <span id="autoStatus">OFF</span>
                 </button>
             </div>
         </div>
 
-        <!-- FOOTER (Upgrades) -->
-        <div class="game-footer">
+        <!-- UPGRADES -->
+        <div class="p-4 border-t border-gray-800 bg-black/90">
             <div class="grid grid-cols-3 gap-2">
-                <button onclick="buyUpgrade('luck')" id="btnLuck" class="cyber-btn text-xs py-2 flex flex-col gap-0.5 rounded bg-black/40">
-                    <i data-lucide="zap" class="w-3 h-3"></i>
-                    <span class="text-[8px]">SORTE</span>
-                    <span id="priceLuck" class="font-mono text-theme">$50</span>
+                <button onclick="buyUpgrade('luck')" id="btnLuck" class="cyber-btn text-xs py-2 flex flex-col gap-0.5 rounded bg-white/5">
+                    <i data-lucide="zap" class="w-4 h-4"></i><span>SORTE</span><span id="priceLuck" class="font-mono text-theme">$50</span>
                 </button>
-                <button onclick="buyUpgrade('value')" id="btnValue" class="cyber-btn text-xs py-2 flex flex-col gap-0.5 rounded bg-black/40">
-                    <i data-lucide="hard-drive" class="w-3 h-3"></i>
-                    <span class="text-[8px]">VALOR</span>
-                    <span id="priceValue" class="font-mono text-theme">$75</span>
+                <button onclick="buyUpgrade('value')" id="btnValue" class="cyber-btn text-xs py-2 flex flex-col gap-0.5 rounded bg-white/5">
+                    <i data-lucide="hard-drive" class="w-4 h-4"></i><span>VALOR</span><span id="priceValue" class="font-mono text-theme">$75</span>
                 </button>
-                <button onclick="buyUpgrade('speed')" id="btnSpeed" class="cyber-btn text-xs py-2 flex flex-col gap-0.5 rounded bg-black/40">
-                    <i data-lucide="clock" class="w-3 h-3"></i>
-                    <span class="text-[8px]">SPEED</span>
-                    <span id="priceSpeed" class="font-mono text-theme">$30</span>
+                <button onclick="buyUpgrade('speed')" id="btnSpeed" class="cyber-btn text-xs py-2 flex flex-col gap-0.5 rounded bg-white/5">
+                    <i data-lucide="clock" class="w-4 h-4"></i><span>SPEED</span><span id="priceSpeed" class="font-mono text-theme">$30</span>
                 </button>
-            </div>
-            
-            <!-- Dev Toggle -->
-            <button class="absolute bottom-2 right-2 p-2 opacity-20 hover:opacity-100" onclick="toggleDev()"><i data-lucide="bug" class="w-3 h-3 text-white"></i></button>
-        </div>
-
-        <!-- OVERLAYS -->
-        <div id="lockoutOverlay" class="hidden">
-            <div class="text-3xl font-bold text-red-500 animate-pulse">LOCKOUT</div>
-            <div class="text-white text-xs mt-2">SISTEMA COMPROMETIDO</div>
-            <div id="lockoutTimer" class="text-xl text-white font-mono mt-2">5.0s</div>
-        </div>
-        
-        <div id="storyOverlay" style="display: none;">
-            <div id="storyBg" class="story-bg"></div>
-            <div class="story-box">
-                <img id="storyAvatar" src="" class="story-av" onerror="this.src='https://ui-avatars.com/api/?name=User&background=000&color=fff'">
-                <div class="flex-1">
-                    <div id="storySpeaker" class="text-theme font-bold text-sm mb-1">...</div>
-                    <div id="storyText" class="text-gray-300 text-xs leading-relaxed min-h-[3rem]">...</div>
-                    <div class="text-right mt-2"><button onclick="nextStory()" class="cyber-btn text-[10px] py-1 px-3 inline-block">CONTINUAR</button></div>
-                </div>
             </div>
         </div>
         
+        <!-- Dev -->
+        <button class="fixed top-2 right-2 p-2 opacity-10 hover:opacity-100 z-50 text-white" onclick="toggleDev()"><i data-lucide="bug" class="w-4 h-4"></i></button>
         <div id="devPanel" class="hidden fixed top-10 right-2 bg-black border border-red-500 p-2 z-[200]">
-            <button class="block w-full text-left text-xs text-white p-1" onclick="state.money+=1000;updateUI()">+1000</button>
+            <button class="block w-full text-left text-xs text-white p-1" onclick="state.money+=1000;updateUI()">+$1000</button>
         </div>
 
     </div>
@@ -335,18 +336,18 @@
             "LORI (IA)": "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=200&q=80"
         };
         const TARGETS = [
-            { id: 'atm', name: 'ATM', color: 'theme-green', baseReward: 10, unlockCost: 0, icon: 'credit-card', bg: 'https://images.unsplash.com/photo-1517502884422-41e157d4430c?w=400&q=80' },
-            { id: 'bank', name: 'BANCO', color: 'theme-blue', baseReward: 50, unlockCost: 500, icon: 'building', bg: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=400&q=80' },
-            { id: 'casino', name: 'CASSINO', color: 'theme-purple', baseReward: 200, unlockCost: 2000, icon: 'gem', bg: 'https://images.unsplash.com/photo-1516455207990-7a41ce80f7ee?w=400&q=80' },
-            { id: 'military', name: 'BASE', color: 'theme-red', baseReward: 1000, unlockCost: 10000, icon: 'shield-alert', bg: 'https://images.unsplash.com/photo-1557683316-973673baf926?w=400&q=80' },
-            { id: 'ai', name: 'IA CORE', color: 'theme-gold', baseReward: 5000, unlockCost: 50000, icon: 'cpu', bg: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=400&q=80' }
+            { id: 'atm', name: 'ATM', color: 'theme-green', baseReward: 10, unlockCost: 0, icon: 'credit-card', bg: 'https://images.unsplash.com/photo-1517502884422-41e157d4430c?w=400&q=80', perk: null },
+            { id: 'bank', name: 'BANCO', color: 'theme-blue', baseReward: 50, unlockCost: 500, icon: 'building', bg: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=400&q=80', perk: {name:"Passivo", desc:"+$5/s", icon:"coins"} },
+            { id: 'casino', name: 'CASSINO', color: 'theme-purple', baseReward: 200, unlockCost: 2000, icon: 'gem', bg: 'https://images.unsplash.com/photo-1516455207990-7a41ce80f7ee?w=400&q=80', perk: {name:"Crítico", desc:"Chance 5x", icon:"dices"} },
+            { id: 'military', name: 'BASE', color: 'theme-red', baseReward: 1000, unlockCost: 10000, icon: 'shield-alert', bg: 'https://images.unsplash.com/photo-1557683316-973673baf926?w=400&q=80', perk: {name:"Turbo", desc:"-30% CD", icon:"zap"} },
+            { id: 'ai', name: 'IA CORE', color: 'theme-gold', baseReward: 5000, unlockCost: 50000, icon: 'cpu', bg: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=400&q=80', perk: {name:"Focus", desc:"+15% Chance", icon:"sparkles"} }
         ];
         const STORY_DATA = {
-            intro: [{s:"MÃE",t:"Filho, a gente precisa desse dinheiro. Larga esse computador!"}, {s:"VOCÊ",t:"Mãe, confia em mim. Achei um jeito."}],
-            unlock_bank: [{s:"LORI (IA)",t:"Acesso bancário liberado. Cuidado com o rastro."}],
-            unlock_casino: [{s:"VOCÊ",t:"Cassino hackeado. O dinheiro está entrando."}],
-            unlock_military: [{s:"LORI (IA)",t:"Alerta! Nível de ameaça militar. Eles sabem."}, {s:"VOCÊ",t:"Preciso de mais poder para apagar os logs."}],
-            unlock_ai: [{s:"VOCÊ",t:"O núcleo final... É aqui que tudo muda."}]
+            intro: [{s:"MÃE",t:"Filho, precisamos do dinheiro. O aluguel venceu."}, {s:"VOCÊ",t:"Mãe, relaxa. Achei um jeito de 'minerar' uns créditos."}],
+            unlock_bank: [{s:"LORI (IA)",t:"Acesso bancário liberado. Logs camuflados."}],
+            unlock_casino: [{s:"VOCÊ",t:"O Cassino tem uma falha no RNG. Dinheiro fácil."}],
+            unlock_military: [{s:"LORI (IA)",t:"Alerta. Nível militar detectado. Eles sabem quem você é."}, {s:"VOCÊ",t:"Se eu controlar a base, posso apagar minha ficha."}],
+            unlock_ai: [{s:"VOCÊ",t:"O Núcleo. É aqui que eu reescrevo o sistema."}]
         };
         const CODE_SNIPPETS = ["injecting...", "0x9F3A", "decrypt", "bypass", "root_access", "ping_ok"];
 
@@ -359,15 +360,19 @@
             autoMode: false, trace: 0
         };
         let isHacking = false, isCooldown = false, isLockout = false;
-        let storyQueue = [], storyStep = 0;
+        let storyQueue = [], storyStep = 0, typewriterTimeout;
 
-        // --- DOM SAFE GETTER ---
+        // --- DOM HELPER ---
         const $ = (id) => document.getElementById(id);
         const setText = (id, txt) => { const el = $(id); if(el) el.innerText = txt; }
 
         // --- STORY ---
         function startStory() {
-            playStory(STORY_DATA.intro);
+            document.getElementById('startScreen').style.opacity = '0';
+            setTimeout(() => {
+                document.getElementById('startScreen').style.display = 'none';
+                playStory(STORY_DATA.intro);
+            }, 500);
         }
         function playStory(seq) {
             storyQueue = seq; storyStep = 0;
@@ -375,41 +380,80 @@
             showStoryStep();
         }
         function showStoryStep() {
+            clearTimeout(typewriterTimeout);
             const step = storyQueue[storyStep];
             setText('storySpeaker', step.s);
             setText('storyText', step.t);
-            $('storyAvatar').src = CHARACTERS[step.s] || CHARACTERS["VOCÊ"];
+            const avatar = $('storyAvatar');
+            if(avatar) avatar.src = CHARACTERS[step.s] || CHARACTERS["VOCÊ"];
+            
+            // Simples Typewriter
+            const fullText = step.t;
+            const el = $('storyText');
+            el.innerText = "";
+            let i = 0;
+            function type() {
+                if(i < fullText.length) { el.innerText += fullText.charAt(i); i++; typewriterTimeout = setTimeout(type, 20); }
+            }
+            type();
         }
         function nextStory() {
+            const el = $('storyText');
+            if(el.innerText.length < storyQueue[storyStep].t.length) {
+                clearTimeout(typewriterTimeout);
+                el.innerText = storyQueue[storyStep].t;
+                return;
+            }
             storyStep++;
             if(storyStep < storyQueue.length) showStoryStep();
-            else $('storyOverlay').style.display = 'none';
+            else {
+                $('storyOverlay').style.display = 'none';
+                updateTheme();
+                if(storyQueue === STORY_DATA.unlock_ai) $('endingScreen').style.display = 'flex';
+            }
+        }
+        
+        function chooseEnding(type) {
+            alert(type === 'god' ? "Você se fundiu à IA. Fim do Jogo." : "Você resetou o mundo. Fim do Jogo.");
+            location.reload();
         }
 
-        // --- GAME LOGIC ---
+        // --- LOGIC ---
         function renderTargets() {
             const list = $('targetList');
+            if(!list) return;
             list.innerHTML = '';
             TARGETS.forEach((t, idx) => {
                 const div = document.createElement('div');
                 const locked = idx >= state.unlockedTargets;
                 const active = idx === state.currentTargetIndex;
-                div.className = `target-card ${active ? 'active' : ''} ${locked ? 'locked' : ''} ${idx===state.unlockedTargets ? 'unlockable' : ''}`;
-                div.innerHTML = `<img src="${t.bg}" /><div class="target-content">${locked ? `<i data-lucide="lock" class="w-4 h-4 text-gray-500"></i>` : `<i data-lucide="${t.icon}" class="w-4 h-4 text-theme"></i>`}</div>`;
+                const unlockable = (idx === state.unlockedTargets);
+                
+                div.className = `target-card ${active ? 'active' : ''} ${locked ? 'locked' : ''} ${unlockable ? 'unlockable' : ''}`;
+                
+                // Fallback icon logic handled in HTML string
+                div.innerHTML = `
+                    <img src="${t.bg}" onerror="this.style.display='none'" />
+                    <div class="target-content">
+                        ${locked ? `<i data-lucide="lock" class="w-4 h-4 text-gray-500"></i>` : `<i data-lucide="${t.icon}" class="w-4 h-4 text-theme"></i>`}
+                        ${unlockable ? `<span class="text-[9px] font-bold text-yellow-500 block">$${t.unlockCost}</span>` : ''}
+                    </div>
+                `;
                 
                 div.onclick = () => {
-                    if(navigator.vibrate) navigator.vibrate(10);
                     if(idx >= state.unlockedTargets) {
-                        if(state.money >= TARGETS[idx].unlockCost) {
-                            state.money -= TARGETS[idx].unlockCost;
-                            state.unlockedTargets = Math.max(state.unlockedTargets, idx + 1);
-                            state.currentTargetIndex = idx;
-                            if(idx === 1) playStory(STORY_DATA.unlock_bank);
-                            else if(idx === 2) playStory(STORY_DATA.unlock_casino);
-                            else if(idx === 3) playStory(STORY_DATA.unlock_military);
-                            else if(idx === 4) playStory(STORY_DATA.unlock_ai);
-                            updateTheme();
-                        } else setLori("Falta dinheiro!", "error");
+                        if(idx === state.unlockedTargets) { // Next one
+                            if(state.money >= TARGETS[idx].unlockCost) {
+                                state.money -= TARGETS[idx].unlockCost;
+                                state.unlockedTargets++;
+                                state.currentTargetIndex = idx;
+                                if(idx===1) playStory(STORY_DATA.unlock_bank);
+                                else if(idx===2) playStory(STORY_DATA.unlock_casino);
+                                else if(idx===3) playStory(STORY_DATA.unlock_military);
+                                else if(idx===4) playStory(STORY_DATA.unlock_ai);
+                                updateTheme();
+                            } else setLori(`Falta $${TARGETS[idx].unlockCost - state.money}!`, "error");
+                        } else setLori("Bloqueado.", "error");
                     } else { state.currentTargetIndex = idx; updateTheme(); }
                 };
                 list.appendChild(div);
@@ -422,69 +466,73 @@
             document.body.className = t.color + " flex items-center justify-center h-screen w-screen bg-black overflow-hidden";
             $('bgLayer').style.backgroundImage = `url('${t.bg}')`;
             $('centerIcon').setAttribute('data-lucide', t.icon);
+            
+            const badge = $('perkBadge');
+            if(t.perk) {
+                badge.classList.remove('hidden');
+                $('perkIcon').setAttribute('data-lucide', t.perk.icon);
+                setText('perkText', `${t.perk.name}`);
+            } else badge.classList.add('hidden');
+
             lucide.createIcons(); updateUI(); renderTargets();
         }
 
         function updateUI() {
             setText('moneyDisplay', Math.floor(state.money));
             setText('streakDisplay', state.streak);
-            let chance = Math.min(95, state.chance + (state.currentTargetIndex===4 ? 15:0));
-            setText('chanceDisplay', `${chance}%`);
+            let c = Math.min(95, state.chance + (state.currentTargetIndex===4 ? 15:0));
+            setText('chanceDisplay', `${c}%`);
             setText('costDisplay', state.hackCost);
             
-            // Buttons
             updateBtn('btnLuck', 'priceLuck', state.costLuck, state.chance >= 95);
             updateBtn('btnValue', 'priceValue', state.costValue, false);
             updateBtn('btnSpeed', 'priceSpeed', state.costSpeed, state.cooldown <= 200);
 
-            // Trace
             $('traceBar').style.width = `${state.trace}%`;
-            const clearCost = Math.floor(state.money * 0.1) + 10;
-            setText('clearCost', clearCost);
-            if(state.trace > 0) $('clearLogsBtn').classList.remove('hidden'); 
-            else $('clearLogsBtn').classList.add('hidden');
+            
+            const clrBtn = $('clearLogsBtn');
+            const clrCost = Math.floor(state.money * 0.1) + 10;
+            setText('clearCost', clrCost);
+            if(state.trace > 0) clrBtn.classList.remove('hidden'); else clrBtn.classList.add('hidden');
         }
 
-        function updateBtn(id, labelId, cost, max) {
-            const btn = $(id); const lbl = $(labelId);
+        function updateBtn(id, lid, cost, max) {
+            const btn = $(id); const lbl = $(lid);
+            if(!btn) return;
             if(max) { lbl.innerText="MAX"; btn.disabled=true; }
             else { lbl.innerText=`$${cost}`; btn.disabled = state.money < cost || isHacking; }
         }
 
+        // --- HACK ---
         function triggerHack() {
             if(isLockout) return;
-            if(state.money < state.hackCost) { 
-                setLori("Sem fundos!", "error"); 
-                if(state.autoMode) toggleAuto(); 
-                return; 
-            }
-            
+            if(state.money < state.hackCost) { setLori("Sem grana.", "error"); if(state.autoMode) toggleAuto(); return; }
             isHacking = true; state.money -= state.hackCost; 
-            if(navigator.vibrate && !state.autoMode) navigator.vibrate(15);
             
-            // Visuals start
-            $('hackBtn').classList.add('opacity-50');
-            $('hackBtnText').innerText = "...";
+            // Visuals
+            $('hackBtn').classList.add('opacity-50'); $('hackBtnText').innerText = "...";
             $('battleContainer').style.opacity = '1';
-            $('pulseRing').classList.remove('hidden');
-            $('pulseRing').classList.add('pulse-effect');
-            $('scanLaser').classList.add('active'); $('scanLaser').style.opacity = '1';
+            $('pulseRing').classList.remove('hidden'); $('pulseRing').classList.add('pulse-effect');
+            const laser = $('scanLaser'); if(laser) { laser.classList.add('active'); laser.style.opacity='1'; }
             $('centerIcon').classList.add('text-theme');
             
-            // Code lines
+            // Code
             $('codeContainer').innerHTML = ''; $('codeContainer').style.opacity = '1';
-            for(let i=0; i<3; i++) addCodeLine();
+            for(let i=0; i<3; i++) {
+                const l = document.createElement('div'); l.className='code-line'; l.innerText = "> "+CODE_SNIPPETS[Math.floor(Math.random()*CODE_SNIPPETS.length)];
+                $('codeContainer').appendChild(l);
+            }
 
-            let duration = 0;
-            let chance = state.chance + (state.currentTargetIndex===4 ? 15 : 0);
+            let chance = state.chance + (state.currentTargetIndex===4 ? 15:0);
             const win = Math.random() < (chance/100);
             
+            let duration = 0;
             const interval = setInterval(() => {
                 duration += 50;
                 let rnd = 20 + Math.random() * 60;
                 $('battleBar').style.width = `${rnd}%`;
                 
-                if(duration >= 1000) { // 1s battle
+                if(duration >= 1000) {
                     clearInterval(interval);
                     $('battleBar').style.width = win ? '100%' : '0%';
                     setTimeout(() => resolve(win), 200);
@@ -493,11 +541,10 @@
         }
 
         function resolve(win) {
-            // Visuals stop
             $('battleContainer').style.opacity = '0';
             $('codeContainer').style.opacity = '0';
             $('pulseRing').classList.add('hidden');
-            $('scanLaser').classList.remove('active'); $('scanLaser').style.opacity = '0';
+            const laser = $('scanLaser'); if(laser) { laser.classList.remove('active'); laser.style.opacity='0'; }
             $('centerIcon').classList.remove('text-theme');
 
             if(win) {
@@ -505,9 +552,8 @@
                 let t = TARGETS[state.currentTargetIndex];
                 let reward = Math.floor(t.baseReward * (1 + (state.streak*0.5) + (state.lvlValue*0.2)));
                 
-                // Casino
                 if(state.currentTargetIndex===2 && Math.random() < 0.05) { reward *= 5; setLori("Sorte Grande!", "jackpot"); }
-                else if(state.streak >= 10) { reward *= 5; state.streak = 0; setLori("JACKPOT!", "jackpot"); if(navigator.vibrate && !state.autoMode) navigator.vibrate([50,50,50]); }
+                else if(state.streak >= 10) { reward *= 5; state.streak = 0; setLori("JACKPOT!", "jackpot"); }
                 else setLori("Sucesso.", "success");
                 
                 state.money += reward;
@@ -517,7 +563,6 @@
                 state.streak = 0;
                 setLori("Falha.", "error");
                 addTrace(1);
-                if(navigator.vibrate && !state.autoMode) navigator.vibrate(100);
             }
             
             isHacking = false; updateUI(); startCooldown();
@@ -526,15 +571,13 @@
         function startCooldown() {
             isCooldown = true;
             let cd = state.cooldown;
-            if(state.currentTargetIndex===3) cd *= 0.7; // Military
+            if(state.currentTargetIndex===3) cd *= 0.7; 
             const bar = $('cooldownBar');
             bar.style.transition = `width ${cd}ms linear`; bar.style.width = '0%';
-            
             setTimeout(() => {
                 isCooldown = false;
                 bar.style.transition = 'none'; bar.style.width = '100%';
-                $('hackBtn').classList.remove('opacity-50');
-                $('hackBtnText').innerText = "HACK";
+                $('hackBtn').classList.remove('opacity-50'); $('hackBtnText').innerText = "HACK";
                 if(state.autoMode && !isLockout) triggerHack();
             }, cd);
         }
@@ -549,7 +592,7 @@
             isLockout = true; if(state.autoMode) toggleAuto();
             const pen = Math.floor(state.money * 0.3); state.money -= pen; state.trace = 0;
             $('lockoutScreen').style.display = 'flex';
-            $('lostMoneyDisplay').innerText = `-$${pen}`;
+            setText('lostMoneyDisplay', `-$${pen}`);
             setTimeout(() => { $('lockoutScreen').style.display = 'none'; isLockout = false; updateUI(); }, 5000);
         }
 
@@ -561,30 +604,23 @@
         function toggleAuto() {
             state.autoMode = !state.autoMode;
             $('autoBtn').className = `cyber-btn text-[10px] py-1 px-2 rounded ${state.autoMode ? 'bg-yellow-600 text-black border-yellow-500' : 'border-gray-700 text-gray-500'}`;
-            $('autoStatus').innerText = state.autoMode ? "ON" : "OFF";
+            setText('autoStatus', state.autoMode ? "ON" : "OFF");
             if(state.autoMode && !isHacking && !isLockout) triggerHack();
         }
 
-        function addCodeLine() {
-            const line = document.createElement('div'); line.className = 'code-line';
-            line.innerText = "> " + CODE_SNIPPETS[Math.floor(Math.random()*CODE_SNIPPETS.length)];
-            $('codeContainer').prepend(line);
-            if($('codeContainer').children.length > 5) $('codeContainer').lastChild.remove();
-        }
-        
-        function spawnFloat(txt, cls) {
-            const el = document.createElement('div'); el.className = `floater ${cls}`; el.innerText = txt;
-            $('floatAnchor').appendChild(el); setTimeout(() => el.remove(), 800);
-        }
-
         function setLori(txt, type) {
-            $('loriMsg').innerText = txt;
+            setText('loriMsg', txt);
             const icon = $('loriIcon');
             if(type==='success') { icon.setAttribute('data-lucide', 'smile'); icon.classList.add('text-theme'); }
             else if(type==='error') { icon.setAttribute('data-lucide', 'frown'); icon.classList.replace('text-theme', 'text-red-500'); }
             else if(type==='jackpot') { icon.setAttribute('data-lucide', 'star'); icon.classList.replace('text-theme', 'text-yellow-400'); }
             lucide.createIcons();
             setTimeout(() => { icon.setAttribute('data-lucide', 'bot'); icon.classList.remove('text-red-500', 'text-yellow-400'); icon.classList.add('text-theme'); lucide.createIcons(); }, 1500);
+        }
+
+        function spawnFloat(txt, cls) {
+            const el = document.createElement('div'); el.className = `floater ${cls}`; el.innerText = txt;
+            $('floatAnchor').appendChild(el); setTimeout(() => el.remove(), 800);
         }
 
         function buyUpgrade(type) {
@@ -594,14 +630,14 @@
             updateUI();
         }
 
-        // Dev tools
         function toggleDev() { $('devPanel').classList.toggle('hidden'); }
-        function devAddMoney(a) { state.money += a; updateUI(); }
-        function devUnlockAll() { state.unlockedTargets = 5; renderTargets(); }
-        function devMaxLuck() { state.chance = 95; updateUI(); }
+        
+        // Passive Income
+        setInterval(() => { if(state.currentTargetIndex===1 && !isHacking && !isLockout) { state.money+=5; updateUI(); } }, 1000);
 
-        // Start
-        setTimeout(() => { startStory(); }, 500);
+        // Init
+        updateTheme();
     </script>
 </body>
 </html>
+
